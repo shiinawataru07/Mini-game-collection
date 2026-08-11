@@ -1,7 +1,8 @@
-"""Tests for the Pygame-independent 2048 rules."""
+"""Tests for 2048 rules, themes, and responsive layout."""
 
 import unittest
 
+from games.game_2048.game import DEFAULT_THEME, THEMES, _page_layout, _settings_controls
 from games.game_2048.logic import (
     GameState,
     add_random_tile,
@@ -151,6 +152,34 @@ class GameStateTests(unittest.TestCase):
         self.assertEqual(sum(value != 0 for row in restarted.board for value in row), 2)
 
 
+class UiSettingsTests(unittest.TestCase):
+    def test_expected_color_themes_are_available(self):
+        self.assertEqual(DEFAULT_THEME, "warm")
+        self.assertEqual(set(THEMES), {"warm", "blue", "green"})
+
+    def test_layout_stays_inside_different_window_sizes(self):
+        for window_size in ((360, 500), (500, 620), (900, 700)):
+            with self.subTest(window_size=window_size):
+                width, height = window_size
+                layout = _page_layout(window_size)
+                board = layout["board"]
+                settings = layout["settings"]
+
+                self.assertGreaterEqual(board.left, 0)
+                self.assertGreaterEqual(board.top, 0)
+                self.assertLessEqual(board.right, width)
+                self.assertLessEqual(board.bottom, height)
+                self.assertLessEqual(settings.right, width)
+
+    def test_settings_controls_stay_inside_dialog(self):
+        modal, close, theme_buttons, restart = _settings_controls((360, 500))
+
+        self.assertTrue(modal.contains(close))
+        self.assertTrue(modal.contains(restart))
+        self.assertEqual(set(theme_buttons), set(THEMES))
+        for button in theme_buttons.values():
+            self.assertTrue(modal.contains(button))
+
+
 if __name__ == "__main__":
     unittest.main()
-
