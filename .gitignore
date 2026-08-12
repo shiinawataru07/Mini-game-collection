@@ -12,3 +12,4 @@ dist/
 .vscode/
 games/game_2048/.player_data.json
 games/game_snake/.player_data.json
+games/game_minesweeper/.player_data.json

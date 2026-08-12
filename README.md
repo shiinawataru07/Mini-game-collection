@@ -10,8 +10,9 @@
 | --- | --- | --- | --- |
 | 2048 | 已完成，可持续优化 | 移动棋盘并合并相同数字，在有限空间内挑战更高分数。支持多种棋盘尺寸、动画、JSON 存档和 AI 自动游玩。 | [查看玩法与功能](games/game_2048/README.md) |
 | 贪吃蛇 | 已完成，可持续优化 | 控制不断成长的蛇寻找食物并避开危险。支持三种模式、限时奖励食物和暂停设置。 | [查看玩法与功能](games/game_snake/README.md) |
+| 扫雷 | 已完成，可持续优化 | 翻开安全格并标记地雷。支持首击安全、三种经典难度、快捷展开和最佳时间记录。 | [查看玩法与功能](games/game_minesweeper/README.md) |
 
-计划后续加入 Tetris、Minesweeper、Tic-Tac-Toe 和 Maze 等游戏。
+计划后续加入 Tetris、Tic-Tac-Toe 和 Maze 等游戏。
 
 ## 安装与运行
 
@@ -52,7 +53,7 @@ python -m pip install -r requirements.txt
 python main.py
 ```
 
-入口会显示游戏选择界面。可以使用鼠标选择，也可以按 `1` 启动 2048、按 `2` 启动贪吃蛇。游戏内按 `Esc` 可以返回选择界面。
+入口会显示游戏选择界面。可以使用鼠标选择，也可以按 `1` 启动 2048、按 `2` 启动贪吃蛇、按 `3` 启动扫雷。游戏内按 `Esc` 可以返回选择界面。
 
 ## 项目结构
 
@@ -76,19 +77,21 @@ mini-game-collection/
 │   │   ├── config.py               # 主题、文案和界面配置
 │   │   ├── ui.py                   # Pygame 布局与绘制
 │   │   └── game.py                 # 输入处理和游戏主循环
-│   └── game_snake/
-│       ├── README.md               # 贪吃蛇详细介绍和玩法
-│       ├── logic.py                # 移动、成长、食物和碰撞规则
-│       ├── persistence.py          # 历史最佳分数和偏好
-│       ├── config.py               # 速度、主题、文案和界面配置
-│       ├── ui.py                   # 响应式布局与绘制
-│       └── game.py                 # 输入缓冲和固定步进主循环
+│   ├── game_snake/                 # 贪吃蛇规则、界面和主循环
+│   └── game_minesweeper/
+│       ├── README.md               # 扫雷详细介绍和玩法
+│       ├── logic.py                # 布雷、展开、标记和胜负规则
+│       ├── persistence.py          # 各难度最佳时间和偏好
+│       ├── config.py               # 难度、主题、文案和界面配置
+│       ├── ui.py                   # 响应式棋盘与绘制
+│       └── game.py                 # 输入、计时和游戏主循环
 ├── docs/
 │   └── images/                     # 游戏说明文档使用的图片
 ├── tests/
 │   ├── common/                     # 注册表和合集菜单测试
 │   ├── game_2048/                  # 2048 自动化测试
-│   └── game_snake/                 # 贪吃蛇自动化测试
+│   ├── game_snake/                 # 贪吃蛇自动化测试
+│   └── game_minesweeper/           # 扫雷自动化测试
 ├── pyproject.toml                  # 项目元数据、依赖和 Ruff 配置
 ├── requirements.txt
 ├── .gitignore
@@ -137,7 +140,7 @@ GitHub Actions 会在每次推送和拉取请求时执行 Ruff，并在 Python 3
 
 ## 后续计划
 
-- 逐步加入 Tetris、Minesweeper、Tic-Tac-Toe 和 Maze
+- 逐步加入 Tetris、Tic-Tac-Toe 和 Maze
 - 只在多个游戏确实需要时提取共享组件和通用设置
 - 为新增游戏补充截图或演示 GIF
 - 使用 PyInstaller 提供无需安装 Python 的可执行版本

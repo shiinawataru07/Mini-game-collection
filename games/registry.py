@@ -10,6 +10,7 @@ from typing import Literal, cast
 import pygame
 
 from games.game_2048.preview import draw_preview as draw_2048_preview
+from games.game_minesweeper.preview import draw_preview as draw_minesweeper_preview
 from games.game_snake.preview import draw_preview as draw_snake_preview
 
 Navigation = Literal["menu", "quit"]
@@ -55,6 +56,15 @@ GAMES: tuple[GameDescriptor, ...] = (
         accent=(79, 151, 81),
         runner="games.game_snake.game:run",
         preview=draw_snake_preview,
+    ),
+    GameDescriptor(
+        id="minesweeper",
+        title="扫雷",
+        subtitle="逻辑排雷 · 推理",
+        shortcut=3,
+        accent=(49, 110, 184),
+        runner="games.game_minesweeper.game:run",
+        preview=draw_minesweeper_preview,
     ),
 )
 
