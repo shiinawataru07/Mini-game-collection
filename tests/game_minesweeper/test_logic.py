@@ -11,6 +11,7 @@ from games.game_minesweeper.logic import (
     chord_cell,
     cycle_mark,
     neighbors,
+    new_custom_game,
     new_game,
     place_mines,
     remaining_mines,
@@ -66,6 +67,21 @@ def prepared_state(
 
 
 class BoardCreationTests(unittest.TestCase):
+    def test_custom_board_accepts_reasonable_limits(self):
+        minimum = new_custom_game(8, 8, 1)
+        maximum = new_custom_game(30, 20, 120)
+        self.assertEqual((minimum.width, minimum.height, minimum.mine_count), (8, 8, 1))
+        self.assertEqual(
+            (maximum.width, maximum.height, maximum.mine_count),
+            (30, 20, 120),
+        )
+        self.assertEqual(maximum.difficulty, "custom")
+
+    def test_custom_board_rejects_invalid_dimensions_and_density(self):
+        for values in ((7, 8, 1), (31, 8, 1), (8, 7, 1), (8, 21, 1), (8, 8, 17)):
+            with self.subTest(values=values), self.assertRaises(ValueError):
+                new_custom_game(*values)
+
     def test_supported_difficulties_have_expected_dimensions(self):
         for difficulty, spec in DIFFICULTIES.items():
             with self.subTest(difficulty=difficulty):
@@ -119,15 +135,15 @@ class PlayerActionTests(unittest.TestCase):
         self.assertIs(result.state, flagged)
         self.assertFalse(result.state.mines_placed)
 
-    def test_marks_cycle_and_flags_are_limited_to_mine_count(self):
+    def test_marks_cycle_and_flags_can_exceed_mine_count(self):
         state = new_game()
         positions = [(row, column) for row in range(2) for column in range(6)]
         for position in positions:
             state = cycle_mark(state, position)
-        self.assertEqual(state.flag_count, state.mine_count)
-        self.assertEqual(remaining_mines(state), 0)
+        self.assertEqual(state.flag_count, len(positions))
+        self.assertEqual(remaining_mines(state), state.mine_count - len(positions))
         state = cycle_mark(state, positions[0])
-        self.assertEqual(state.flag_count, state.mine_count - 1)
+        self.assertEqual(state.flag_count, len(positions) - 1)
         self.assertEqual(state.board[positions[0][0]][positions[0][1]].visibility, "questioned")
         state = cycle_mark(state, positions[0])
         self.assertEqual(state.board[positions[0][0]][positions[0][1]].visibility, "hidden")

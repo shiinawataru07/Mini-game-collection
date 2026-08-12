@@ -4,7 +4,13 @@ import random
 import unittest
 from unittest.mock import patch
 
-from games.game_minesweeper.logic import Cell, GameState, new_game, place_mines
+from games.game_minesweeper.logic import (
+    Cell,
+    GameState,
+    new_custom_game,
+    new_game,
+    place_mines,
+)
 from games.game_minesweeper.solver import (
     deduce,
     find_hint,
@@ -130,6 +136,15 @@ class SolvableGenerationTests(unittest.TestCase):
             state = place_mines(new_game(), (4, 4), random.Random(3))
         self.assertTrue(state.mines_placed)
         self.assertEqual(solve.call_count, 2)
+
+    def test_custom_board_is_also_verified_as_no_guess(self):
+        first_reveal = (6, 9)
+        state = place_mines(
+            new_custom_game(20, 14, 55),
+            first_reveal,
+            random.Random(12),
+        )
+        self.assertTrue(solve_from_first_reveal(state, first_reveal))
 
 
 class HintTests(unittest.TestCase):

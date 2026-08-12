@@ -7,7 +7,9 @@ from typing import Literal
 
 Color = tuple[int, int, int]
 Language = Literal["en", "zh"]
-Difficulty = Literal["beginner", "intermediate", "expert"]
+PresetDifficulty = Literal["beginner", "intermediate", "expert"]
+Difficulty = Literal["beginner", "intermediate", "expert", "custom"]
+CustomField = Literal["width", "height", "mines"]
 
 WINDOW_WIDTH = 900
 WINDOW_HEIGHT = 700
@@ -19,6 +21,11 @@ HINT_DISPLAY_MS = 4000
 DEFAULT_THEME = "classic"
 DEFAULT_LANGUAGE: Language = "zh"
 DEFAULT_DIFFICULTY: Difficulty = "beginner"
+CUSTOM_MIN_WIDTH = 8
+CUSTOM_MAX_WIDTH = 30
+CUSTOM_MIN_HEIGHT = 8
+CUSTOM_MAX_HEIGHT = 20
+CUSTOM_MAX_MINES = 120
 
 
 @dataclass(frozen=True)
@@ -28,12 +35,39 @@ class DifficultySpec:
     mines: int
 
 
-DIFFICULTIES: dict[Difficulty, DifficultySpec] = {
+DIFFICULTIES: dict[PresetDifficulty, DifficultySpec] = {
     "beginner": DifficultySpec(9, 9, 10),
     "intermediate": DifficultySpec(16, 16, 40),
     "expert": DifficultySpec(30, 16, 99),
 }
-DIFFICULTY_ORDER: tuple[Difficulty, ...] = ("beginner", "intermediate", "expert")
+DIFFICULTY_ORDER: tuple[Difficulty, ...] = (
+    "beginner",
+    "intermediate",
+    "expert",
+    "custom",
+)
+DEFAULT_CUSTOM_SPEC = DifficultySpec(20, 14, 55)
+
+
+def max_custom_mines(width: int, height: int) -> int:
+    """Keep custom boards readable and practical for no-guess generation."""
+
+    return max(1, min(CUSTOM_MAX_MINES, width * height // 4, width * height - 9))
+
+
+def normalize_custom_spec(width, height, mines) -> DifficultySpec:
+    """Return a valid custom spec, clamping malformed persisted or UI values."""
+
+    if not isinstance(width, int) or isinstance(width, bool):
+        width = DEFAULT_CUSTOM_SPEC.width
+    if not isinstance(height, int) or isinstance(height, bool):
+        height = DEFAULT_CUSTOM_SPEC.height
+    if not isinstance(mines, int) or isinstance(mines, bool):
+        mines = DEFAULT_CUSTOM_SPEC.mines
+    width = max(CUSTOM_MIN_WIDTH, min(CUSTOM_MAX_WIDTH, width))
+    height = max(CUSTOM_MIN_HEIGHT, min(CUSTOM_MAX_HEIGHT, height))
+    mines = max(1, min(max_custom_mines(width, height), mines))
+    return DifficultySpec(width, height, mines)
 
 
 @dataclass(frozen=True)
@@ -131,6 +165,11 @@ TEXTS: dict[Language, dict[str, str]] = {
         "beginner": "Beginner",
         "intermediate": "Intermediate",
         "expert": "Expert",
+        "custom": "Custom",
+        "columns": "Columns",
+        "rows": "Rows",
+        "custom_mines": "Mines",
+        "custom_limits": "8–30 columns  ·  8–20 rows  ·  mines up to 25%",
         "theme": "Theme",
         "classic": "Classic",
         "forest": "Forest",
@@ -144,7 +183,7 @@ TEXTS: dict[Language, dict[str, str]] = {
         "won": "Board cleared!",
         "lost": "Mine triggered",
         "restart_hint": "Press R to play again",
-        "hint": "Left click reveals  ·  Right click cycles flag / ?  ·  Click a number to clear",
+        "hint": "Left reveals  ·  Right cycles flag / ?  ·  Hold both on a number to clear",
         "hint_safe": "Hint: this cell is logically safe",
         "hint_mine": "Hint: this cell must contain a mine",
         "hint_incorrect_flag": "Hint: this flag is incorrect",
@@ -164,6 +203,11 @@ TEXTS: dict[Language, dict[str, str]] = {
         "beginner": "初级",
         "intermediate": "中级",
         "expert": "高级",
+        "custom": "自定义",
+        "columns": "列数",
+        "rows": "行数",
+        "custom_mines": "地雷",
+        "custom_limits": "8–30 列  ·  8–20 行  ·  地雷最多约占 25%",
         "theme": "主题",
         "classic": "经典",
         "forest": "森林",
@@ -177,7 +221,7 @@ TEXTS: dict[Language, dict[str, str]] = {
         "won": "排雷成功！",
         "lost": "踩到地雷了",
         "restart_hint": "按 R 再来一局",
-        "hint": "左键翻开  ·  右键循环旗帜 / 问号  ·  点击数字可展开周围格子",
+        "hint": "左键翻开  ·  右键循环旗帜 / 问号  ·  数字上同时按左右键快捷展开",
         "hint_safe": "提示：这个格子通过逻辑可确定安全",
         "hint_mine": "提示：这个格子通过逻辑可确定有雷",
         "hint_incorrect_flag": "提示：这个旗帜标记错误",

@@ -4,9 +4,10 @@ import unittest
 
 import pygame
 from games.game_minesweeper.config import DIFFICULTIES
-from games.game_minesweeper.logic import new_game
+from games.game_minesweeper.logic import new_custom_game, new_game
 from games.game_minesweeper.solver import Hint
 from games.game_minesweeper.ui import (
+    _format_mine_count,
     cell_at_position,
     draw_game,
     page_layout,
@@ -15,6 +16,10 @@ from games.game_minesweeper.ui import (
 
 
 class MinesweeperUiTests(unittest.TestCase):
+    def test_remaining_mines_can_be_displayed_as_negative(self):
+        self.assertEqual(_format_mine_count(8), "08")
+        self.assertEqual(_format_mine_count(-2), "-2")
+
     def test_all_difficulties_use_square_cells_inside_window(self):
         for window_size in ((640, 520), (900, 700), (1200, 800)):
             for difficulty, spec in DIFFICULTIES.items():
@@ -59,6 +64,9 @@ class MinesweeperUiTests(unittest.TestCase):
         clickable = [
             controls.close,
             *controls.difficulties.values(),
+            *controls.custom_decrease.values(),
+            *controls.custom_increase.values(),
+            *controls.custom_values.values(),
             *controls.themes.values(),
             *controls.languages.values(),
         ]
@@ -71,6 +79,22 @@ class MinesweeperUiTests(unittest.TestCase):
                 for second in difficulty_rects[index + 1 :]
             )
         )
+
+    def test_custom_board_and_settings_render_at_minimum_window_size(self):
+        pygame.font.init()
+        screen = pygame.Surface((640, 520))
+        best_times = {"beginner": None, "intermediate": None, "expert": None}
+        state = new_custom_game(30, 20, 120)
+        layout = draw_game(
+            screen,
+            state,
+            best_times,
+            "classic",
+            "zh",
+            settings_open=True,
+        )
+        self.assertLessEqual(layout.board.right, 640)
+        self.assertLessEqual(layout.board.bottom, 520)
 
     def test_game_draws_with_an_active_solver_hint(self):
         pygame.font.init()

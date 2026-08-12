@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "mini-game-collection"
-version = "0.1.0"
+version = "1.0.0"
 description = "A tested collection of classic mini-games built with Python and Pygame."
 readme = "README.md"
 requires-python = ">=3.10"
@@ -15,6 +15,9 @@ dependencies = [
 [project.optional-dependencies]
 dev = [
     "ruff>=0.9,<1",
+]
+release = [
+    "pyinstaller>=6.10,<7",
 ]
 
 [project.scripts]
@@ -46,4 +49,3 @@ select = [
 quote-style = "double"
 indent-style = "space"
 line-ending = "auto"
-

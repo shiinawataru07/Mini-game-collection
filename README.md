@@ -2,6 +2,8 @@
 
 一个使用 **Python** 和 **Pygame** 开发的经典小游戏合集。
 
+当前稳定版本：**v1.0.0**。可以从 [GitHub Releases](https://github.com/shiinawataru07/Mini-game-collection/releases) 下载免安装的 Windows x64 压缩包，解压后运行 `MiniGameCollection.exe`。
+
 项目用于练习游戏规则设计、图形界面开发和自动化测试。每个游戏拥有独立的代码目录和说明文档，核心规则尽量与 Pygame 界面分离，便于测试、维护和继续扩展。
 
 ## 游戏列表
@@ -10,20 +12,26 @@
 | --- | --- | --- | --- |
 | 2048 | 已完成，可持续优化 | 移动棋盘并合并相同数字，在有限空间内挑战更高分数。支持多种棋盘尺寸、动画、JSON 存档和 AI 自动游玩。 | [查看玩法与功能](games/game_2048/README.md) |
 | 贪吃蛇 | 已完成，可持续优化 | 控制不断成长的蛇寻找食物并避开危险。支持三种模式、限时奖励食物和暂停设置。 | [查看玩法与功能](games/game_snake/README.md) |
-| 扫雷 | 已完成，可持续优化 | 翻开安全格并标记地雷。支持纯逻辑棋盘、求解器提示、三种经典难度和最佳时间记录。 | [查看玩法与功能](games/game_minesweeper/README.md) |
+| 扫雷 | 已完成，可持续优化 | 翻开安全格并标记地雷。支持纯逻辑棋盘、求解器提示、三种经典难度、自定义棋盘和最佳时间记录。 | [查看玩法与功能](games/game_minesweeper/README.md) |
 
 计划后续加入 Tetris、Tic-Tac-Toe 和 Maze 等游戏。
 
 ## 安装与运行
 
-### 1. 获取项目
+### Windows 免安装版
+
+从 [Releases](https://github.com/shiinawataru07/Mini-game-collection/releases) 下载 `Mini-Game-Collection-v1.0.0-Windows-x64.zip`，完整解压后运行 `MiniGameCollection.exe`。同名 `.sha256` 文件可用于校验下载完整性。
+
+### 从源代码运行
+
+#### 1. 获取项目
 
 ```bash
 git clone https://github.com/shiinawataru07/Mini-game-collection.git
 cd Mini-game-collection
 ```
 
-### 2. 创建虚拟环境（推荐）
+#### 2. 创建虚拟环境（推荐）
 
 ```bash
 python -m venv .venv
@@ -41,13 +49,13 @@ macOS / Linux：
 source .venv/bin/activate
 ```
 
-### 3. 安装依赖
+#### 3. 安装依赖
 
 ```bash
 python -m pip install -r requirements.txt
 ```
 
-### 4. 启动合集
+#### 4. 启动合集
 
 ```bash
 python main.py

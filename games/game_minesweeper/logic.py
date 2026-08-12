@@ -7,7 +7,13 @@ from collections import deque
 from dataclasses import dataclass, replace
 from typing import Literal
 
-from .config import DEFAULT_DIFFICULTY, DIFFICULTIES, Difficulty
+from .config import (
+    DEFAULT_DIFFICULTY,
+    DIFFICULTIES,
+    Difficulty,
+    DifficultySpec,
+    max_custom_mines,
+)
 
 CellVisibility = Literal["hidden", "revealed", "flagged", "questioned"]
 GameStatus = Literal["ready", "running", "won", "lost"]
@@ -54,6 +60,20 @@ def new_game(difficulty: Difficulty = DEFAULT_DIFFICULTY) -> GameState:
         raise ValueError(f"Unsupported Minesweeper difficulty: {difficulty}") from error
     board = tuple(tuple(Cell() for _ in range(spec.width)) for _ in range(spec.height))
     return GameState(spec.width, spec.height, spec.mines, board, difficulty)
+
+
+def new_custom_game(width: int, height: int, mine_count: int) -> GameState:
+    """Create a custom board after strict range and density validation."""
+
+    if not (8 <= width <= 30):
+        raise ValueError("Custom width must be between 8 and 30.")
+    if not (8 <= height <= 20):
+        raise ValueError("Custom height must be between 8 and 20.")
+    if not (1 <= mine_count <= max_custom_mines(width, height)):
+        raise ValueError("Custom mine count exceeds the supported density.")
+    spec = DifficultySpec(width, height, mine_count)
+    board = tuple(tuple(Cell() for _ in range(spec.width)) for _ in range(spec.height))
+    return GameState(spec.width, spec.height, spec.mines, board, "custom")
 
 
 def _validate_position(state: GameState, position: Position) -> None:
@@ -218,8 +238,6 @@ def cycle_mark(state: GameState, position: Position) -> GameState:
     if cell.visibility == "revealed":
         return state
     if cell.visibility == "hidden":
-        if state.flag_count >= state.mine_count:
-            return state
         visibility: CellVisibility = "flagged"
         flag_delta = 1
     elif cell.visibility == "flagged":

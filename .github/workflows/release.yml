@@ -1,0 +1,77 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  windows:
+    name: Build Windows release
+    runs-on: windows-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: pyproject.toml
+
+      - name: Install release dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[release]"
+
+      - name: Run tests
+        env:
+          SDL_VIDEODRIVER: dummy
+          SDL_AUDIODRIVER: dummy
+          PYGAME_HIDE_SUPPORT_PROMPT: "1"
+        run: python -m unittest discover -s tests
+
+      - name: Build application
+        run: python -m PyInstaller --clean --noconfirm MiniGameCollection.spec
+
+      - name: Smoke test executable
+        shell: pwsh
+        run: |
+          $process = Start-Process `
+            -FilePath "dist/MiniGameCollection/MiniGameCollection.exe" `
+            -PassThru `
+            -WindowStyle Hidden
+          Start-Sleep -Seconds 5
+          if ($process.HasExited) {
+            throw "Packaged application exited unexpectedly with code $($process.ExitCode)."
+          }
+          Stop-Process -Id $process.Id
+
+      - name: Package and checksum
+        shell: pwsh
+        run: |
+          $package = "Mini-Game-Collection-${{ github.ref_name }}-Windows-x64"
+          New-Item -ItemType Directory -Force release | Out-Null
+          Move-Item -LiteralPath "dist/MiniGameCollection" -Destination "release/$package"
+          Compress-Archive -Path "release/$package" -DestinationPath "release/$package.zip"
+          $hash = Get-FileHash -Algorithm SHA256 "release/$package.zip"
+          "$($hash.Hash.ToLower())  $package.zip" |
+            Set-Content -Encoding ascii "release/$package.zip.sha256"
+
+      - name: Create GitHub Release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $package = "Mini-Game-Collection-${{ github.ref_name }}-Windows-x64"
+          gh release create "${{ github.ref_name }}" `
+            "release/$package.zip" `
+            "release/$package.zip.sha256" `
+            --verify-tag `
+            --generate-notes `
+            --title "Mini Game Collection ${{ github.ref_name }}"

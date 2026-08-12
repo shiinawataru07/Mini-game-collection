@@ -10,11 +10,14 @@ from games.common.controls import draw_button
 from games.common.fonts import get_font
 
 from .config import (
+    DEFAULT_CUSTOM_SPEC,
     DEFAULT_LANGUAGE,
     DIFFICULTY_ORDER,
     NUMBER_COLORS,
     THEMES,
+    CustomField,
     Difficulty,
+    DifficultySpec,
     Language,
     Theme,
     text,
@@ -44,6 +47,9 @@ class SettingsControls:
     modal: pygame.Rect
     close: pygame.Rect
     difficulties: dict[Difficulty, pygame.Rect]
+    custom_decrease: dict[CustomField, pygame.Rect]
+    custom_increase: dict[CustomField, pygame.Rect]
+    custom_values: dict[CustomField, pygame.Rect]
     themes: dict[str, pygame.Rect]
     languages: dict[Language, pygame.Rect]
 
@@ -103,31 +109,49 @@ def page_layout(window_size: tuple[int, int], grid_size: tuple[int, int]) -> Lay
 
 def settings_controls(window_size: tuple[int, int]) -> SettingsControls:
     width, height = window_size
-    modal = pygame.Rect(0, 0, min(560, width - 36), min(460, height - 36))
+    modal = pygame.Rect(0, 0, min(590, width - 36), min(470, height - 24))
     modal.center = (width // 2, height // 2)
     close = pygame.Rect(modal.right - 92, modal.top + 18, 70, 34)
     left = modal.left + 30
     content_width = modal.width - 60
     gap = 10
 
-    difficulty_width = (content_width - gap * 2) // 3
+    difficulty_width = (content_width - gap * 3) // 4
     difficulties = {
         name: pygame.Rect(
-            left + index * (difficulty_width + gap), modal.top + 100, difficulty_width, 48
+            left + index * (difficulty_width + gap), modal.top + 88, difficulty_width, 42
         )
         for index, name in enumerate(DIFFICULTY_ORDER)
     }
+    field_width = (content_width - gap * 2) // 3
+    custom_decrease: dict[CustomField, pygame.Rect] = {}
+    custom_increase: dict[CustomField, pygame.Rect] = {}
+    custom_values: dict[CustomField, pygame.Rect] = {}
+    for index, field in enumerate(("width", "height", "mines")):
+        field_left = left + index * (field_width + gap)
+        custom_decrease[field] = pygame.Rect(field_left, modal.top + 164, 36, 40)
+        custom_increase[field] = pygame.Rect(field_left + field_width - 36, modal.top + 164, 36, 40)
+        custom_values[field] = pygame.Rect(field_left + 40, modal.top + 164, field_width - 80, 40)
     theme_width = (content_width - gap * 2) // 3
     themes = {
-        name: pygame.Rect(left + index * (theme_width + gap), modal.top + 220, theme_width, 48)
+        name: pygame.Rect(left + index * (theme_width + gap), modal.top + 264, theme_width, 44)
         for index, name in enumerate(THEMES)
     }
     language_width = (content_width - gap) // 2
     languages: dict[Language, pygame.Rect] = {
-        "zh": pygame.Rect(left, modal.top + 340, language_width, 48),
-        "en": pygame.Rect(left + language_width + gap, modal.top + 340, language_width, 48),
+        "zh": pygame.Rect(left, modal.top + 366, language_width, 44),
+        "en": pygame.Rect(left + language_width + gap, modal.top + 366, language_width, 44),
     }
-    return SettingsControls(modal, close, difficulties, themes, languages)
+    return SettingsControls(
+        modal,
+        close,
+        difficulties,
+        custom_decrease,
+        custom_increase,
+        custom_values,
+        themes,
+        languages,
+    )
 
 
 def cell_at_position(layout: Layout, position: tuple[int, int]) -> Position | None:
@@ -343,6 +367,7 @@ def _draw_settings(
     theme_name: str,
     language: Language,
     difficulty: Difficulty,
+    custom_spec: DifficultySpec,
 ) -> None:
     theme = THEMES[theme_name]
     controls = settings_controls(screen.get_size())
@@ -357,15 +382,36 @@ def _draw_settings(
     _draw_button(screen, controls.close, text(language, "close"), theme, language)
 
     sections = (
-        (text(language, "difficulty"), controls.modal.top + 72),
-        (text(language, "theme"), controls.modal.top + 192),
-        (text(language, "language"), controls.modal.top + 312),
+        (text(language, "difficulty"), controls.modal.top + 62),
+        (text(language, "theme"), controls.modal.top + 238),
+        (text(language, "language"), controls.modal.top + 340),
     )
     for label, y in sections:
         rendered = _font(17, language, True).render(label, True, theme.muted_text)
         screen.blit(rendered, (controls.modal.left + 30, y))
     for name, rect in controls.difficulties.items():
         _draw_button(screen, rect, text(language, name), theme, language, name == difficulty)
+    custom_values: dict[CustomField, int] = {
+        "width": custom_spec.width,
+        "height": custom_spec.height,
+        "mines": custom_spec.mines,
+    }
+    custom_labels: dict[CustomField, str] = {
+        "width": text(language, "columns"),
+        "height": text(language, "rows"),
+        "mines": text(language, "custom_mines"),
+    }
+    for field, value_rect in controls.custom_values.items():
+        label = _font(14, language, True).render(custom_labels[field], True, theme.muted_text)
+        screen.blit(label, label.get_rect(midbottom=(value_rect.centerx, value_rect.top - 5)))
+        _draw_button(screen, controls.custom_decrease[field], "−", theme, language)
+        _draw_button(screen, controls.custom_increase[field], "+", theme, language)
+        pygame.draw.rect(screen, theme.background, value_rect, border_radius=8)
+        pygame.draw.rect(screen, theme.grid, value_rect, width=1, border_radius=8)
+        value = _font(19, "en", True).render(str(custom_values[field]), True, theme.text)
+        screen.blit(value, value.get_rect(center=value_rect.center))
+    limits = _font(13, language).render(text(language, "custom_limits"), True, theme.muted_text)
+    screen.blit(limits, limits.get_rect(center=(controls.modal.centerx, controls.modal.top + 220)))
     for name, rect in controls.themes.items():
         _draw_button(screen, rect, text(language, name), theme, language, name == theme_name)
     for name, rect in controls.languages.items():
@@ -379,6 +425,10 @@ def _format_time(elapsed_ms: int | None, language: Language) -> str:
     return f"{min(999, elapsed_ms // 1000):03d}"
 
 
+def _format_mine_count(value: int) -> str:
+    return f"{value:02d}"
+
+
 def draw_game(
     screen: pygame.Surface,
     state: GameState,
@@ -388,6 +438,7 @@ def draw_game(
     settings_open: bool = False,
     active_hint: Hint | None = None,
     hint_message_key: str | None = None,
+    custom_spec: DifficultySpec = DEFAULT_CUSTOM_SPEC,
 ) -> Layout:
     """Draw a full Minesweeper frame and return its clickable layout."""
 
@@ -418,7 +469,7 @@ def draw_game(
         screen,
         layout.mines,
         text(language, "mines"),
-        f"{remaining_mines(state):02d}",
+        _format_mine_count(remaining_mines(state)),
         theme,
         language,
     )
@@ -434,7 +485,7 @@ def draw_game(
         screen,
         layout.best,
         text(language, "best"),
-        _format_time(best_times_ms[state.difficulty], language),
+        _format_time(best_times_ms.get(state.difficulty), language),
         theme,
         language,
     )
@@ -462,5 +513,5 @@ def draw_game(
             language,
         )
     if settings_open:
-        _draw_settings(screen, theme_name, language, state.difficulty)
+        _draw_settings(screen, theme_name, language, state.difficulty, custom_spec)
     return layout
