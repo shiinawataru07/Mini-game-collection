@@ -10,7 +10,7 @@
 | --- | --- | --- | --- |
 | 2048 | 已完成，可持续优化 | 移动棋盘并合并相同数字，在有限空间内挑战更高分数。支持多种棋盘尺寸、动画、JSON 存档和 AI 自动游玩。 | [查看玩法与功能](games/game_2048/README.md) |
 | 贪吃蛇 | 已完成，可持续优化 | 控制不断成长的蛇寻找食物并避开危险。支持三种模式、限时奖励食物和暂停设置。 | [查看玩法与功能](games/game_snake/README.md) |
-| 扫雷 | 已完成，可持续优化 | 翻开安全格并标记地雷。支持首击安全、三种经典难度、快捷展开和最佳时间记录。 | [查看玩法与功能](games/game_minesweeper/README.md) |
+| 扫雷 | 已完成，可持续优化 | 翻开安全格并标记地雷。支持纯逻辑棋盘、求解器提示、三种经典难度和最佳时间记录。 | [查看玩法与功能](games/game_minesweeper/README.md) |
 
 计划后续加入 Tetris、Tic-Tac-Toe 和 Maze 等游戏。
 
@@ -81,6 +81,7 @@ mini-game-collection/
 │   └── game_minesweeper/
 │       ├── README.md               # 扫雷详细介绍和玩法
 │       ├── logic.py                # 布雷、展开、标记和胜负规则
+│       ├── solver.py               # 纯逻辑求解、生成验证和提示
 │       ├── persistence.py          # 各难度最佳时间和偏好
 │       ├── config.py               # 难度、主题、文案和界面配置
 │       ├── ui.py                   # 响应式棋盘与绘制

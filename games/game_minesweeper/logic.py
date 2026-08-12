@@ -9,9 +9,10 @@ from typing import Literal
 
 from .config import DEFAULT_DIFFICULTY, DIFFICULTIES, Difficulty
 
-CellVisibility = Literal["hidden", "revealed", "flagged"]
+CellVisibility = Literal["hidden", "revealed", "flagged", "questioned"]
 GameStatus = Literal["ready", "running", "won", "lost"]
 Position = tuple[int, int]
+MAX_GENERATION_ATTEMPTS = 10_000
 
 
 @dataclass(frozen=True)
@@ -79,8 +80,29 @@ def _with_cell(board: Board, position: Position, cell: Cell) -> Board:
     return tuple(tuple(board_row) for board_row in rows)
 
 
-def place_mines(state: GameState, first_reveal: Position, rng=None) -> GameState:
-    """Place mines after the first reveal, keeping its surrounding area safe."""
+def _board_with_mines(state: GameState, mines: set[Position]) -> Board:
+    board_rows: list[tuple[Cell, ...]] = []
+    for row in range(state.height):
+        cells: list[Cell] = []
+        for column in range(state.width):
+            position = (row, column)
+            mine = position in mines
+            adjacent = 0
+            if not mine:
+                adjacent = sum(neighbor in mines for neighbor in neighbors(state, position))
+            original = state.board[row][column]
+            cells.append(Cell(mine, adjacent, original.visibility))
+        board_rows.append(tuple(cells))
+    return tuple(board_rows)
+
+
+def place_mines(
+    state: GameState,
+    first_reveal: Position,
+    rng=None,
+    require_solvable: bool = True,
+) -> GameState:
+    """Place a first-click-safe board that the deterministic solver can finish."""
 
     _validate_position(state, first_reveal)
     if state.mines_placed:
@@ -95,25 +117,21 @@ def place_mines(state: GameState, first_reveal: Position, rng=None) -> GameState
     if len(candidates) < state.mine_count:
         raise ValueError("The board is too dense for a safe first reveal.")
     random_source = rng or random
-    mines = set(random_source.sample(candidates, state.mine_count))
-    board_rows: list[tuple[Cell, ...]] = []
-    for row in range(state.height):
-        cells: list[Cell] = []
-        for column in range(state.width):
-            position = (row, column)
-            mine = position in mines
-            adjacent = 0
-            if not mine:
-                adjacent = sum(neighbor in mines for neighbor in neighbors(state, position))
-            original = state.board[row][column]
-            cells.append(Cell(mine, adjacent, original.visibility))
-        board_rows.append(tuple(cells))
-    return replace(
-        state,
-        board=tuple(board_rows),
-        mines_placed=True,
-        status="running",
-    )
+    for _ in range(MAX_GENERATION_ATTEMPTS):
+        mines = set(random_source.sample(candidates, state.mine_count))
+        candidate = replace(
+            state,
+            board=_board_with_mines(state, mines),
+            mines_placed=True,
+            status="running",
+        )
+        if not require_solvable:
+            return candidate
+        from .solver import solve_from_first_reveal
+
+        if solve_from_first_reveal(candidate, first_reveal):
+            return candidate
+    raise RuntimeError("Could not generate a logic-solvable Minesweeper board.")
 
 
 def _expand_safe_cells(
@@ -126,14 +144,14 @@ def _expand_safe_cells(
     while pending:
         position = pending.popleft()
         cell = board[position[0]][position[1]]
-        if cell.visibility != "hidden" or cell.has_mine:
+        if cell.visibility not in ("hidden", "questioned") or cell.has_mine:
             continue
         board = _with_cell(board, position, replace(cell, visibility="revealed"))
         revealed.append(position)
         if cell.adjacent_mines == 0:
             for neighbor in neighbors(state, position):
                 neighbor_cell = board[neighbor[0]][neighbor[1]]
-                if neighbor_cell.visibility == "hidden" and neighbor not in queued:
+                if neighbor_cell.visibility in ("hidden", "questioned") and neighbor not in queued:
                     queued.add(neighbor)
                     pending.append(neighbor)
     return board, tuple(revealed)
@@ -153,7 +171,7 @@ def _finish_reveal(
         for row in range(state.height):
             for column in range(state.width):
                 cell = rows[row][column]
-                if cell.has_mine and cell.visibility == "hidden":
+                if cell.has_mine and cell.visibility in ("hidden", "questioned"):
                     rows[row][column] = replace(cell, visibility="flagged")
         board = tuple(tuple(row) for row in rows)
         flag_count = state.mine_count
@@ -190,7 +208,9 @@ def reveal_cell(state: GameState, position: Position, rng=None) -> ActionResult:
     return _finish_reveal(state, board, revealed)
 
 
-def toggle_flag(state: GameState, position: Position) -> GameState:
+def cycle_mark(state: GameState, position: Position) -> GameState:
+    """Cycle an unrevealed cell through flag, question mark, and no mark."""
+
     _validate_position(state, position)
     if state.status in ("won", "lost"):
         return state
@@ -202,11 +222,20 @@ def toggle_flag(state: GameState, position: Position) -> GameState:
             return state
         visibility: CellVisibility = "flagged"
         flag_delta = 1
+    elif cell.visibility == "flagged":
+        visibility = "questioned"
+        flag_delta = -1
     else:
         visibility = "hidden"
-        flag_delta = -1
+        flag_delta = 0
     board = _with_cell(state.board, position, replace(cell, visibility=visibility))
     return replace(state, board=board, flag_count=state.flag_count + flag_delta)
+
+
+def toggle_flag(state: GameState, position: Position) -> GameState:
+    """Backward-compatible alias for the three-state mark cycle."""
+
+    return cycle_mark(state, position)
 
 
 def chord_cell(state: GameState, position: Position) -> ActionResult:
@@ -225,7 +254,7 @@ def chord_cell(state: GameState, position: Position) -> ActionResult:
     hidden = tuple(
         neighbor
         for neighbor in adjacent
-        if state.board[neighbor[0]][neighbor[1]].visibility == "hidden"
+        if state.board[neighbor[0]][neighbor[1]].visibility in ("hidden", "questioned")
     )
     triggered = next(
         (neighbor for neighbor in hidden if state.board[neighbor[0]][neighbor[1]].has_mine),

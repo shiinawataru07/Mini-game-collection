@@ -15,7 +15,7 @@ def draw_preview(screen: pygame.Surface, rect: pygame.Rect) -> None:
     gap = 2
     cell_size = (size - gap * 2) // 5
     values = (
-        (None, None, None, 1, 0),
+        (None, "question", None, 1, 0),
         (None, "flag", None, 1, 0),
         (None, None, None, 2, 1),
         (1, 1, 1, 2, None),
@@ -31,7 +31,7 @@ def draw_preview(screen: pygame.Surface, rect: pygame.Rect) -> None:
                 cell_size - 1,
             )
             value = values[row][column]
-            hidden = value is None or value == "flag"
+            hidden = value is None or value in ("flag", "question")
             pygame.draw.rect(screen, (177, 188, 201) if hidden else (229, 233, 238), cell)
             if value == "flag":
                 pole_x = cell.centerx + 2
@@ -47,6 +47,11 @@ def draw_preview(screen: pygame.Surface, rect: pygame.Rect) -> None:
                         (pole_x, cell.top + 12),
                     ),
                 )
+            elif value == "question":
+                label = get_font(max(12, cell_size // 2), bold=True).render(
+                    "?", True, (49, 110, 184)
+                )
+                screen.blit(label, label.get_rect(center=cell.center))
             elif isinstance(value, int) and value:
                 label = get_font(max(12, cell_size // 2), bold=True).render(
                     str(value), True, colors[value]

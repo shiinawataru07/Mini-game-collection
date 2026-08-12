@@ -14,6 +14,7 @@ WINDOW_HEIGHT = 700
 MIN_WINDOW_WIDTH = 640
 MIN_WINDOW_HEIGHT = 520
 FPS = 60
+HINT_DISPLAY_MS = 4000
 
 DEFAULT_THEME = "classic"
 DEFAULT_LANGUAGE: Language = "zh"
@@ -122,6 +123,7 @@ TEXTS: dict[Language, dict[str, str]] = {
         "back": "Menu",
         "settings": "Settings",
         "restart": "Restart",
+        "get_hint": "Hint",
         "mines": "Mines",
         "time": "Time",
         "best": "Best",
@@ -142,7 +144,11 @@ TEXTS: dict[Language, dict[str, str]] = {
         "won": "Board cleared!",
         "lost": "Mine triggered",
         "restart_hint": "Press R to play again",
-        "hint": "Left click reveals  ·  Right click flags  ·  Click a number to clear around it",
+        "hint": "Left click reveals  ·  Right click cycles flag / ?  ·  Click a number to clear",
+        "hint_safe": "Hint: this cell is logically safe",
+        "hint_mine": "Hint: this cell must contain a mine",
+        "hint_incorrect_flag": "Hint: this flag is incorrect",
+        "hint_none": "No logical hint is available; check your flags",
         "no_record": "--",
     },
     "zh": {
@@ -150,6 +156,7 @@ TEXTS: dict[Language, dict[str, str]] = {
         "back": "菜单",
         "settings": "设置",
         "restart": "重开",
+        "get_hint": "提示",
         "mines": "剩余雷数",
         "time": "时间",
         "best": "最佳",
@@ -170,7 +177,11 @@ TEXTS: dict[Language, dict[str, str]] = {
         "won": "排雷成功！",
         "lost": "踩到地雷了",
         "restart_hint": "按 R 再来一局",
-        "hint": "左键翻开  ·  右键插旗  ·  点击数字可展开周围格子",
+        "hint": "左键翻开  ·  右键循环旗帜 / 问号  ·  点击数字可展开周围格子",
+        "hint_safe": "提示：这个格子通过逻辑可确定安全",
+        "hint_mine": "提示：这个格子通过逻辑可确定有雷",
+        "hint_incorrect_flag": "提示：这个旗帜标记错误",
+        "hint_none": "当前没有可用逻辑提示，请检查旗帜",
         "no_record": "--",
     },
 }

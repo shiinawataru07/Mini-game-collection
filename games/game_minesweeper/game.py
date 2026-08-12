@@ -14,6 +14,7 @@ from .config import (
     DEFAULT_THEME,
     DIFFICULTIES,
     FPS,
+    HINT_DISPLAY_MS,
     MIN_WINDOW_HEIGHT,
     MIN_WINDOW_WIDTH,
     TEXTS,
@@ -23,8 +24,9 @@ from .config import (
     Difficulty,
     Language,
 )
-from .logic import advance_time, new_game, reveal_cell, toggle_flag
+from .logic import advance_time, cycle_mark, new_game, reveal_cell
 from .persistence import PlayerData, load_player_data, save_player_data, update_best_time
+from .solver import Hint, find_hint
 from .ui import cell_at_position, draw_game, page_layout, settings_controls
 
 Navigation = Literal["menu", "quit"]
@@ -58,6 +60,9 @@ def run() -> Navigation:
     best_times = dict(player_data.best_times_ms)
     state = new_game(difficulty)
     settings_open = False
+    active_hint: Hint | None = None
+    hint_message_key: str | None = None
+    hint_remaining_ms = 0
     navigation: Navigation = "menu"
     running = True
 
@@ -65,9 +70,24 @@ def run() -> Navigation:
         save_player_data(PlayerData(dict(best_times), theme_name, language, difficulty))
 
     def choose_difficulty(selected: Difficulty) -> None:
-        nonlocal difficulty, state
+        nonlocal active_hint, difficulty, hint_message_key, hint_remaining_ms, state
         difficulty = selected
         state = new_game(difficulty)
+        active_hint = None
+        hint_message_key = None
+        hint_remaining_ms = 0
+
+    def clear_hint() -> None:
+        nonlocal active_hint, hint_message_key, hint_remaining_ms
+        active_hint = None
+        hint_message_key = None
+        hint_remaining_ms = 0
+
+    def request_hint() -> None:
+        nonlocal active_hint, hint_message_key, hint_remaining_ms
+        active_hint = find_hint(state)
+        hint_message_key = f"hint_{active_hint.kind}" if active_hint is not None else "hint_none"
+        hint_remaining_ms = HINT_DISPLAY_MS
 
     def record_win(previous_status: str) -> None:
         nonlocal best_times
@@ -102,8 +122,11 @@ def run() -> Navigation:
                 elif event.key == pygame.K_r:
                     state = new_game(difficulty)
                     settings_open = False
+                    clear_hint()
                 elif event.key == pygame.K_s:
                     settings_open = not settings_open
+                elif event.key == pygame.K_h and not settings_open:
+                    request_hint()
                 elif not settings_open and event.key in DIFFICULTY_KEYS:
                     choose_difficulty(DIFFICULTY_KEYS[event.key])
                 continue
@@ -136,23 +159,40 @@ def run() -> Navigation:
                 running = False
             elif event.button == 1 and layout.settings.collidepoint(event.pos):
                 settings_open = True
+            elif event.button == 1 and layout.hint.collidepoint(event.pos):
+                request_hint()
             elif event.button == 1 and layout.restart.collidepoint(event.pos):
                 state = new_game(difficulty)
+                clear_hint()
             elif event.button in (1, 3):
                 position = cell_at_position(layout, event.pos)
                 if position is None:
                     continue
+                clear_hint()
                 previous_status = state.status
                 if event.button == 1:
                     state = reveal_cell(state, position).state
                     record_win(previous_status)
                 else:
-                    state = toggle_flag(state, position)
+                    state = cycle_mark(state, position)
 
         if was_timing and state.status == "running" and not settings_open:
             state = advance_time(state, elapsed_ms)
+        if hint_remaining_ms > 0:
+            hint_remaining_ms = max(0, hint_remaining_ms - elapsed_ms)
+            if hint_remaining_ms == 0:
+                clear_hint()
         if running:
-            draw_game(screen, state, best_times, theme_name, language, settings_open)
+            draw_game(
+                screen,
+                state,
+                best_times,
+                theme_name,
+                language,
+                settings_open,
+                active_hint,
+                hint_message_key,
+            )
             pygame.display.flip()
 
     persist()

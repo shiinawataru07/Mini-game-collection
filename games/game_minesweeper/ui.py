@@ -20,6 +20,7 @@ from .config import (
     text,
 )
 from .logic import GameState, Position, remaining_mines
+from .solver import Hint
 
 
 @dataclass(frozen=True)
@@ -27,6 +28,7 @@ class Layout:
     board: pygame.Rect
     back: pygame.Rect
     settings: pygame.Rect
+    hint: pygame.Rect
     restart: pygame.Rect
     mines: pygame.Rect
     timer: pygame.Rect
@@ -72,6 +74,7 @@ def page_layout(window_size: tuple[int, int], grid_size: tuple[int, int]) -> Lay
     back = pygame.Rect(margin, 18, button_width, button_height)
     settings = pygame.Rect(back.right + 8, 18, button_width, button_height)
     restart = pygame.Rect(width - margin - button_width, 18, button_width, button_height)
+    hint = pygame.Rect(restart.left - 8 - button_width, 18, button_width, button_height)
 
     gap = 8
     card_width = max(82, min(142, (width - margin * 2 - gap * 3) // 4))
@@ -86,6 +89,7 @@ def page_layout(window_size: tuple[int, int], grid_size: tuple[int, int]) -> Lay
         board,
         back,
         settings,
+        hint,
         restart,
         mines,
         timer,
@@ -236,7 +240,18 @@ def _draw_mine(screen: pygame.Surface, rect: pygame.Rect, theme: Theme) -> None:
     )
 
 
-def _draw_board(screen: pygame.Surface, state: GameState, layout: Layout, theme: Theme) -> None:
+def _draw_question(screen: pygame.Surface, rect: pygame.Rect, theme: Theme) -> None:
+    question = _font(max(12, int(rect.height * 0.58)), "en", True).render("?", True, theme.accent)
+    screen.blit(question, question.get_rect(center=rect.center))
+
+
+def _draw_board(
+    screen: pygame.Surface,
+    state: GameState,
+    layout: Layout,
+    theme: Theme,
+    active_hint: Hint | None = None,
+) -> None:
     border = layout.board.inflate(6, 6)
     pygame.draw.rect(screen, theme.board_border, border, border_radius=7)
     for row in range(state.height):
@@ -262,6 +277,8 @@ def _draw_board(screen: pygame.Surface, state: GameState, layout: Layout, theme:
                 _draw_mine(screen, rect, theme)
             elif cell.visibility == "flagged":
                 _draw_flag(screen, rect, theme)
+            elif cell.visibility == "questioned":
+                _draw_question(screen, rect, theme)
             elif cell.visibility == "revealed" and cell.adjacent_mines:
                 number = _font(max(12, int(layout.cell_size * 0.58)), "en", True).render(
                     str(cell.adjacent_mines), True, NUMBER_COLORS[cell.adjacent_mines]
@@ -282,6 +299,19 @@ def _draw_board(screen: pygame.Surface, state: GameState, layout: Layout, theme:
                     (rect.right - inset, rect.top + inset),
                     (rect.left + inset, rect.bottom - inset),
                     max(2, layout.cell_size // 10),
+                )
+            if active_hint is not None and position == active_hint.position:
+                hint_color = {
+                    "safe": theme.accent,
+                    "mine": theme.flag,
+                    "incorrect_flag": theme.danger,
+                }[active_hint.kind]
+                pygame.draw.rect(
+                    screen,
+                    hint_color,
+                    rect.inflate(-4, -4),
+                    width=max(3, layout.cell_size // 10),
+                    border_radius=max(2, layout.cell_size // 8),
                 )
 
 
@@ -356,6 +386,8 @@ def draw_game(
     theme_name: str,
     language: Language,
     settings_open: bool = False,
+    active_hint: Hint | None = None,
+    hint_message_key: str | None = None,
 ) -> Layout:
     """Draw a full Minesweeper frame and return its clickable layout."""
 
@@ -372,6 +404,14 @@ def draw_game(
         theme,
         language,
         settings_open,
+    )
+    _draw_button(
+        screen,
+        layout.hint,
+        text(language, "get_hint"),
+        theme,
+        language,
+        active_hint is not None,
     )
     _draw_button(screen, layout.restart, text(language, "restart"), theme, language)
     _draw_stat(
@@ -406,9 +446,9 @@ def draw_game(
         theme,
         language,
     )
-    _draw_board(screen, state, layout, theme)
+    _draw_board(screen, state, layout, theme, active_hint)
 
-    hint_key = "ready" if state.status == "ready" else "hint"
+    hint_key = hint_message_key or ("ready" if state.status == "ready" else "hint")
     hint = _font(15, language).render(text(language, hint_key), True, theme.muted_text)
     hint_y = min(screen.get_height() - 22, layout.board.bottom + 23)
     screen.blit(hint, hint.get_rect(center=(screen.get_width() // 2, hint_y)))

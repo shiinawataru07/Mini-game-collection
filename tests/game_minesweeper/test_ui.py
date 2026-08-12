@@ -2,8 +2,16 @@
 
 import unittest
 
+import pygame
 from games.game_minesweeper.config import DIFFICULTIES
-from games.game_minesweeper.ui import cell_at_position, page_layout, settings_controls
+from games.game_minesweeper.logic import new_game
+from games.game_minesweeper.solver import Hint
+from games.game_minesweeper.ui import (
+    cell_at_position,
+    draw_game,
+    page_layout,
+    settings_controls,
+)
 
 
 class MinesweeperUiTests(unittest.TestCase):
@@ -25,6 +33,7 @@ class MinesweeperUiTests(unittest.TestCase):
         for control in (
             layout.back,
             layout.settings,
+            layout.hint,
             layout.restart,
             layout.mines,
             layout.timer,
@@ -62,6 +71,21 @@ class MinesweeperUiTests(unittest.TestCase):
                 for second in difficulty_rects[index + 1 :]
             )
         )
+
+    def test_game_draws_with_an_active_solver_hint(self):
+        pygame.font.init()
+        screen = pygame.Surface((900, 700))
+        best_times = {"beginner": None, "intermediate": None, "expert": None}
+        layout = draw_game(
+            screen,
+            new_game(),
+            best_times,
+            "classic",
+            "zh",
+            active_hint=Hint((4, 4), "safe"),
+            hint_message_key="hint_safe",
+        )
+        self.assertTrue(layout.board.collidepoint(layout.board.center))
 
 
 if __name__ == "__main__":

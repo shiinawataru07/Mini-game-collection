@@ -9,6 +9,7 @@ from games.game_minesweeper.logic import (
     GameState,
     advance_time,
     chord_cell,
+    cycle_mark,
     neighbors,
     new_game,
     place_mines,
@@ -24,10 +25,12 @@ def prepared_state(
     mines,
     revealed=(),
     flagged=(),
+    questioned=(),
 ):
     mines = set(mines)
     revealed = set(revealed)
     flagged = set(flagged)
+    questioned = set(questioned)
     rows = []
     for row in range(height):
         cells = []
@@ -44,6 +47,8 @@ def prepared_state(
                 if position in revealed
                 else "flagged"
                 if position in flagged
+                else "questioned"
+                if position in questioned
                 else "hidden"
             )
             cells.append(Cell(position in mines, adjacent, visibility))
@@ -109,20 +114,30 @@ class PlayerActionTests(unittest.TestCase):
         self.assertEqual(result.state.board[2][2].visibility, "flagged")
 
     def test_flagged_cell_cannot_be_revealed(self):
-        flagged = toggle_flag(new_game(), (4, 4))
+        flagged = cycle_mark(new_game(), (4, 4))
         result = reveal_cell(flagged, (4, 4), random.Random(1))
         self.assertIs(result.state, flagged)
         self.assertFalse(result.state.mines_placed)
 
-    def test_flags_toggle_and_are_limited_to_mine_count(self):
+    def test_marks_cycle_and_flags_are_limited_to_mine_count(self):
         state = new_game()
         positions = [(row, column) for row in range(2) for column in range(6)]
         for position in positions:
-            state = toggle_flag(state, position)
+            state = cycle_mark(state, position)
         self.assertEqual(state.flag_count, state.mine_count)
         self.assertEqual(remaining_mines(state), 0)
-        state = toggle_flag(state, positions[0])
+        state = cycle_mark(state, positions[0])
         self.assertEqual(state.flag_count, state.mine_count - 1)
+        self.assertEqual(state.board[positions[0][0]][positions[0][1]].visibility, "questioned")
+        state = cycle_mark(state, positions[0])
+        self.assertEqual(state.board[positions[0][0]][positions[0][1]].visibility, "hidden")
+
+    def test_question_mark_can_be_revealed_and_does_not_count_as_flag(self):
+        state = prepared_state(3, 3, {(2, 2)}, questioned={(0, 0)})
+        result = reveal_cell(state, (0, 0))
+        self.assertEqual(result.state.status, "won")
+        self.assertEqual(result.state.revealed_count, 8)
+        self.assertEqual(result.state.flag_count, 1)
 
     def test_revealing_a_mine_loses(self):
         state = prepared_state(3, 3, {(0, 0)})
@@ -147,6 +162,19 @@ class PlayerActionTests(unittest.TestCase):
         state = prepared_state(3, 3, {(0, 0)}, revealed={(1, 1)})
         result = chord_cell(state, (1, 1))
         self.assertIs(result.state, state)
+
+    def test_chord_treats_question_mark_as_an_unrevealed_cell(self):
+        state = prepared_state(
+            3,
+            3,
+            {(0, 0)},
+            revealed={(1, 1)},
+            flagged={(0, 0)},
+            questioned={(2, 2)},
+        )
+        result = chord_cell(state, (1, 1))
+        self.assertEqual(result.state.status, "won")
+        self.assertEqual(result.state.board[2][2].visibility, "revealed")
 
     def test_actions_after_game_end_do_nothing(self):
         state = prepared_state(2, 2, {(0, 0)})
