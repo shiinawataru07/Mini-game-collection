@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from functools import lru_cache
+from functools import cache
 from typing import Literal
 
 import pygame
@@ -25,14 +25,18 @@ class MenuLayout:
     snake: pygame.Rect
 
 
-@lru_cache(maxsize=None)
+@cache
 def _font(size: int, bold: bool = False) -> pygame.font.Font:
     font_path = None
     for name in ("microsoftyahei", "simhei", "simsun", "notosanscjksc"):
         font_path = pygame.font.match_font(name)
         if font_path:
             break
-    font = pygame.font.Font(font_path, max(14, size)) if font_path else pygame.font.Font(None, max(14, size))
+    font = (
+        pygame.font.Font(font_path, max(14, size))
+        if font_path
+        else pygame.font.Font(None, max(14, size))
+    )
     font.set_bold(bold)
     return font
 
@@ -58,10 +62,22 @@ def _draw_2048_preview(screen: pygame.Surface, rect: pygame.Rect) -> None:
     gap = 5
     cell = (size - gap * 5) // 4
     values = ((2, 0, 4, 0), (0, 8, 0, 0), (0, 0, 16, 0), (0, 0, 0, 32))
-    colors = {0: (205, 193, 180), 2: (238, 228, 218), 4: (237, 224, 200), 8: (242, 177, 121), 16: (245, 149, 99), 32: (246, 124, 95)}
+    colors = {
+        0: (205, 193, 180),
+        2: (238, 228, 218),
+        4: (237, 224, 200),
+        8: (242, 177, 121),
+        16: (245, 149, 99),
+        32: (246, 124, 95),
+    }
     for row in range(4):
         for column in range(4):
-            cell_rect = pygame.Rect(board.left + gap + column * (cell + gap), board.top + gap + row * (cell + gap), cell, cell)
+            cell_rect = pygame.Rect(
+                board.left + gap + column * (cell + gap),
+                board.top + gap + row * (cell + gap),
+                cell,
+                cell,
+            )
             value = values[row][column]
             pygame.draw.rect(screen, colors[value], cell_rect, border_radius=4)
             if value:
@@ -78,8 +94,15 @@ def _draw_snake_preview(screen: pygame.Surface, rect: pygame.Rect) -> None:
     origin_x = preview.centerx - cell * 4
     origin_y = preview.centery - cell * 3
     for index, (column, row) in enumerate(cells):
-        segment = pygame.Rect(origin_x + column * cell + 1, origin_y + row * cell + 1, cell - 2, cell - 2)
-        pygame.draw.rect(screen, (63, 125, 68) if index == len(cells) - 1 else (91, 151, 83), segment, border_radius=cell // 3)
+        segment = pygame.Rect(
+            origin_x + column * cell + 1, origin_y + row * cell + 1, cell - 2, cell - 2
+        )
+        pygame.draw.rect(
+            screen,
+            (63, 125, 68) if index == len(cells) - 1 else (91, 151, 83),
+            segment,
+            border_radius=cell // 3,
+        )
     food_center = (origin_x + 7 * cell + cell // 2, origin_y + 2 * cell + cell // 2)
     pygame.draw.circle(screen, (218, 73, 65), food_center, max(4, cell // 3))
 
@@ -96,12 +119,16 @@ def _draw_card(
     shadow = rect.move(0, 5)
     pygame.draw.rect(screen, (220, 224, 217), shadow, border_radius=18)
     pygame.draw.rect(screen, PANEL, rect, border_radius=18)
-    pygame.draw.rect(screen, accent if hovered else BORDER, rect, width=3 if hovered else 1, border_radius=18)
+    pygame.draw.rect(
+        screen, accent if hovered else BORDER, rect, width=3 if hovered else 1, border_radius=18
+    )
     preview(screen, rect)
     title_surface = _font(31, True).render(title, True, TEXT)
     subtitle_surface = _font(16).render(subtitle, True, MUTED)
     screen.blit(title_surface, title_surface.get_rect(center=(rect.centerx, rect.bottom - 75)))
-    screen.blit(subtitle_surface, subtitle_surface.get_rect(center=(rect.centerx, rect.bottom - 40)))
+    screen.blit(
+        subtitle_surface, subtitle_surface.get_rect(center=(rect.centerx, rect.bottom - 40))
+    )
 
 
 def _choose_game() -> Choice:
@@ -119,8 +146,24 @@ def _choose_game() -> Choice:
         screen.blit(title, title.get_rect(center=(screen.get_width() // 2, 58)))
         screen.blit(subtitle, subtitle.get_rect(center=(screen.get_width() // 2, 100)))
 
-        _draw_card(screen, layout.game_2048, "2048", "数字合并 · 策略", (238, 177, 76), layout.game_2048.collidepoint(mouse), _draw_2048_preview)
-        _draw_card(screen, layout.snake, "贪吃蛇", "移动成长 · 反应", (79, 151, 81), layout.snake.collidepoint(mouse), _draw_snake_preview)
+        _draw_card(
+            screen,
+            layout.game_2048,
+            "2048",
+            "数字合并 · 策略",
+            (238, 177, 76),
+            layout.game_2048.collidepoint(mouse),
+            _draw_2048_preview,
+        )
+        _draw_card(
+            screen,
+            layout.snake,
+            "贪吃蛇",
+            "移动成长 · 反应",
+            (79, 151, 81),
+            layout.snake.collidepoint(mouse),
+            _draw_snake_preview,
+        )
 
         hint = _font(14).render("按 1 / 2 快速选择  ·  Esc 退出", True, MUTED)
         screen.blit(hint, hint.get_rect(center=(screen.get_width() // 2, screen.get_height() - 27)))

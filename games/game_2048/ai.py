@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import math
-from functools import lru_cache
+from functools import cache
 
 from .logic import Board, Direction, empty_cells, move_board
 
@@ -139,7 +139,7 @@ def choose_move(board: Board, depth: int = DEFAULT_SEARCH_DEPTH) -> Direction | 
     if depth < 1:
         raise ValueError("Search depth must be at least 1.")
 
-    @lru_cache(maxsize=None)
+    @cache
     def max_value(frozen: BoardTuple, remaining: int) -> float:
         current = _thaw(frozen)
         moves = legal_moves(current)
@@ -150,7 +150,7 @@ def choose_move(board: Board, depth: int = DEFAULT_SEARCH_DEPTH) -> Direction | 
             for _, moved, gained_score in moves
         )
 
-    @lru_cache(maxsize=None)
+    @cache
     def chance_value(frozen: BoardTuple, remaining: int) -> float:
         current = _thaw(frozen)
         if remaining <= 0:
@@ -168,4 +168,3 @@ def choose_move(board: Board, depth: int = DEFAULT_SEARCH_DEPTH) -> Direction | 
             best_value = value
             best_direction = direction
     return best_direction
-

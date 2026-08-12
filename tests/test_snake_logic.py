@@ -142,9 +142,7 @@ class SnakeLogicTests(unittest.TestCase):
         )
         self.assertEqual(advance(horizontal).state.snake[0], (0, 2))
 
-        vertical = GameState(
-            5, 5, ((2, 0), (2, 1)), "up", (4, 4), status="running", mode="wrap"
-        )
+        vertical = GameState(5, 5, ((2, 0), (2, 1)), "up", (4, 4), status="running", mode="wrap")
         self.assertEqual(advance(vertical).state.snake[0], (2, 4))
 
     def test_maze_walls_are_connected_and_avoid_initial_entities(self):

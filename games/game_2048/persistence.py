@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 
-from .logic import Board, GameState, SUPPORTED_BOARD_SIZES, can_move
+from .logic import SUPPORTED_BOARD_SIZES, Board, GameState, can_move
 
 SAVE_VERSION = 1
 PLAYER_DATA_PATH = Path(__file__).with_name(".player_data.json")
@@ -119,9 +119,7 @@ def parse_save_json(
         raise ValueError("The save does not contain preferences.")
     theme = preferences.get("theme")
     language = preferences.get("language")
-    if not isinstance(theme, str) or (
-        allowed_themes is not None and theme not in allowed_themes
-    ):
+    if not isinstance(theme, str) or (allowed_themes is not None and theme not in allowed_themes):
         raise ValueError("The saved theme is not supported.")
     if not isinstance(language, str) or (
         allowed_languages is not None and language not in allowed_languages

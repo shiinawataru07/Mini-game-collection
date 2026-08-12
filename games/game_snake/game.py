@@ -14,8 +14,8 @@ from .config import (
     FPS,
     MIN_WINDOW_HEIGHT,
     MIN_WINDOW_WIDTH,
-    TEXTS,
     SPEEDS,
+    TEXTS,
     THEMES,
     WINDOW_HEIGHT,
     WINDOW_WIDTH,
@@ -60,7 +60,9 @@ def run() -> Navigation:
     player_data = load_player_data()
     best_score = player_data.best_score
     theme_name = player_data.theme if player_data.theme in THEMES else DEFAULT_THEME
-    language = cast(Language, player_data.language if player_data.language in TEXTS else DEFAULT_LANGUAGE)
+    language = cast(
+        Language, player_data.language if player_data.language in TEXTS else DEFAULT_LANGUAGE
+    )
     speed = cast(Speed, player_data.speed if player_data.speed in SPEEDS else DEFAULT_SPEED)
     state = new_game()
     pending_directions: deque[Direction] = deque(maxlen=2)

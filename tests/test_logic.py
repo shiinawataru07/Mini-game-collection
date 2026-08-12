@@ -12,6 +12,7 @@ from games.game_2048.logic import (
     move_board,
     new_game,
 )
+
 from tests.support import FixedRandom
 
 
@@ -107,9 +108,7 @@ class GameStateTests(unittest.TestCase):
         self.assertEqual(result.score, 14)
 
     def test_invalid_move_does_not_add_tile(self):
-        state = GameState(
-            [[2, 4, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]]
-        )
+        state = GameState([[2, 4, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]])
         result = apply_move(state, "left", FixedRandom())
         self.assertEqual(result.board, state.board)
         self.assertEqual(result.score, 0)

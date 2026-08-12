@@ -1,7 +1,6 @@
 """Mini-game collection entry point."""
 
 import pygame
-
 from games.menu import run as run_menu
 
 

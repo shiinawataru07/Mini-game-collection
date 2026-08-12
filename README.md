@@ -58,6 +58,9 @@ python main.py
 
 ```text
 mini-game-collection/
+├── .github/
+│   └── workflows/
+│       └── ci.yml                  # 测试与 Ruff 自动检查
 ├── main.py                         # 小游戏合集入口
 ├── games/
 │   ├── __init__.py
@@ -81,6 +84,7 @@ mini-game-collection/
 ├── docs/
 │   └── images/                     # 游戏说明文档使用的图片
 ├── tests/                          # 各模块自动化测试
+├── pyproject.toml                  # 项目元数据、依赖和 Ruff 配置
 ├── requirements.txt
 ├── .gitignore
 └── README.md                       # 项目概览
@@ -93,6 +97,7 @@ mini-game-collection/
 - Python 3.10+
 - Pygame 2.5+
 - unittest（Python 标准库）
+- Ruff（代码检查与格式化）
 
 ## 运行测试
 
@@ -102,11 +107,33 @@ python -m unittest discover -s tests -v
 
 测试覆盖核心规则、动画计算、AI 决策、持久化、响应式布局和合集菜单等关键行为。
 
+## 开发与代码质量
+
+安装项目及开发依赖：
+
+```bash
+python -m pip install -e ".[dev]"
+```
+
+运行 Ruff 代码检查：
+
+```bash
+python -m ruff check .
+```
+
+格式化代码并验证格式：
+
+```bash
+python -m ruff format .
+python -m ruff format --check .
+```
+
+GitHub Actions 会在每次推送和拉取请求时执行 Ruff，并在 Python 3.10、3.11、3.12 和 3.13 上运行完整测试。Pygame 测试使用无窗口驱动，因此可以在 CI 环境中运行。
+
 ## 后续计划
 
 - 逐步加入 Tetris、Minesweeper、Tic-Tac-Toe 和 Maze
 - 只在多个游戏确实需要时提取共享组件和通用设置
-- 使用 GitHub Actions 自动运行测试
 - 为新增游戏补充截图或演示 GIF
 - 使用 PyInstaller 提供无需安装 Python 的可执行版本
 - 通过 GitHub Releases 发布带版本号的稳定构建

@@ -22,6 +22,16 @@
 - 自动保存历史最佳分数、速度、主题和语言
 - 响应式窗口，棋盘始终保持方形格子
 
+## 游戏截图
+
+| 三种游戏模式 | 经典模式与奖励食物 |
+| --- | --- |
+| ![贪吃蛇三种模式选择界面](../../docs/images/snake/mode-selection.png) | ![贪吃蛇经典模式与奖励食物](../../docs/images/snake/classic-bonus-food.png) |
+
+| 迷宫模式 | 暂停设置界面 |
+| --- | --- |
+| ![贪吃蛇迷宫模式](../../docs/images/snake/maze-gameplay.png) | ![贪吃蛇暂停设置界面](../../docs/images/snake/paused-settings.png) |
+
 ## 游戏模式
 
 每次进入贪吃蛇或重新开始时，都需要选择游戏模式：

@@ -4,13 +4,13 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass
-from functools import lru_cache
+from functools import cache
 
 import pygame
 
 from .config import (
-    DEFAULT_LANGUAGE,
     BONUS_FOOD_DURATION_MS,
+    DEFAULT_LANGUAGE,
     SPEED_ORDER,
     THEMES,
     Language,
@@ -19,7 +19,7 @@ from .config import (
     moves_per_second,
     text,
 )
-from .logic import Direction, GameMode, GameState
+from .logic import Direction, GameState
 
 
 @dataclass(frozen=True)
@@ -53,7 +53,7 @@ class ModeControls:
     maze: pygame.Rect
 
 
-@lru_cache(maxsize=None)
+@cache
 def _font(size: int, language: Language = DEFAULT_LANGUAGE, bold: bool = False) -> pygame.font.Font:
     size = max(14, size)
     font_path = None
@@ -112,7 +112,9 @@ def settings_controls(window_size: tuple[int, int]) -> SettingsControls:
 
     theme_width = (content_width - gap * 2) // 3
     themes = {
-        name: pygame.Rect(content_left + index * (theme_width + gap), modal.top + 105, theme_width, 45)
+        name: pygame.Rect(
+            content_left + index * (theme_width + gap), modal.top + 105, theme_width, 45
+        )
         for index, name in enumerate(THEMES)
     }
     language_width = (content_width - gap) // 2
@@ -122,7 +124,9 @@ def settings_controls(window_size: tuple[int, int]) -> SettingsControls:
     }
     speed_width = (content_width - gap * 2) // 3
     speeds = {
-        name: pygame.Rect(content_left + index * (speed_width + gap), modal.top + 305, speed_width, 45)
+        name: pygame.Rect(
+            content_left + index * (speed_width + gap), modal.top + 305, speed_width, 45
+        )
         for index, name in enumerate(SPEED_ORDER)
     }
     return SettingsControls(modal, close, themes, languages, speeds)
@@ -194,8 +198,12 @@ def _draw_board(screen: pygame.Surface, state: GameState, layout: Layout, theme:
 
     for cell in state.walls:
         wall_rect = _cell_rect(layout, cell, max(1, layout.cell_size // 14))
-        pygame.draw.rect(screen, theme.maze_wall, wall_rect, border_radius=max(2, layout.cell_size // 7))
-        highlight = wall_rect.inflate(-max(3, layout.cell_size // 4), -max(3, layout.cell_size // 4))
+        pygame.draw.rect(
+            screen, theme.maze_wall, wall_rect, border_radius=max(2, layout.cell_size // 7)
+        )
+        highlight = wall_rect.inflate(
+            -max(3, layout.cell_size // 4), -max(3, layout.cell_size // 4)
+        )
         if highlight.width > 0 and highlight.height > 0:
             pygame.draw.rect(screen, theme.grid, highlight, width=1, border_radius=2)
 
@@ -204,7 +212,9 @@ def _draw_board(screen: pygame.Surface, state: GameState, layout: Layout, theme:
         center = food_rect.center
         radius = max(3, min(food_rect.width, food_rect.height) // 2)
         pygame.draw.circle(screen, theme.food, center, radius)
-        leaf_rect = pygame.Rect(center[0] + radius // 5, center[1] - radius, radius, max(2, radius // 2))
+        leaf_rect = pygame.Rect(
+            center[0] + radius // 5, center[1] - radius, radius, max(2, radius // 2)
+        )
         pygame.draw.ellipse(screen, theme.food_detail, leaf_rect)
 
     if state.bonus_food is not None:
@@ -270,8 +280,12 @@ def _draw_overlay(
     overlay = pygame.Surface(layout.board.size, pygame.SRCALPHA)
     overlay.fill((*theme.overlay, 180))
     screen.blit(overlay, layout.board)
-    title_surface = _font(max(28, layout.cell_size * 2), language, True).render(title, True, (255, 255, 255))
-    subtitle_surface = _font(max(16, layout.cell_size), language).render(subtitle, True, (238, 242, 236))
+    title_surface = _font(max(28, layout.cell_size * 2), language, True).render(
+        title, True, (255, 255, 255)
+    )
+    subtitle_surface = _font(max(16, layout.cell_size), language).render(
+        subtitle, True, (238, 242, 236)
+    )
     center_x, center_y = layout.board.center
     screen.blit(title_surface, title_surface.get_rect(center=(center_x, center_y - 18)))
     screen.blit(subtitle_surface, subtitle_surface.get_rect(center=(center_x, center_y + 30)))
@@ -335,7 +349,13 @@ def _draw_mode_selection(
     ):
         hovered = rect.collidepoint(pygame.mouse.get_pos())
         pygame.draw.rect(screen, theme.background, rect, border_radius=14)
-        pygame.draw.rect(screen, theme.accent if hovered else theme.grid, rect, width=3 if hovered else 1, border_radius=14)
+        pygame.draw.rect(
+            screen,
+            theme.accent if hovered else theme.grid,
+            rect,
+            width=3 if hovered else 1,
+            border_radius=14,
+        )
         mode_title = _font(23, language, True).render(text(language, mode), True, theme.text)
         shortcut_text = {"classic": "1", "wrap": "2", "maze": "3"}[mode]
         shortcut = _font(18, language, True).render(shortcut_text, True, theme.accent)
@@ -358,7 +378,10 @@ def _draw_mode_selection(
             lines.append(current)
         for index, line in enumerate(lines[:3]):
             description = description_font.render(line, True, theme.muted_text)
-            screen.blit(description, description.get_rect(center=(rect.centerx, rect.top + 108 + index * 20)))
+            screen.blit(
+                description,
+                description.get_rect(center=(rect.centerx, rect.top + 108 + index * 20)),
+            )
 
 
 def draw_game(
@@ -424,10 +447,14 @@ def draw_game(
     if state.status == "ready" and not mode_selecting:
         _draw_overlay(screen, layout, text(language, "ready"), "WASD / ↑ ↓ ← →", theme, language)
     elif state.status == "paused" and not settings_open:
-        _draw_overlay(screen, layout, text(language, "paused"), text(language, "continue"), theme, language)
+        _draw_overlay(
+            screen, layout, text(language, "paused"), text(language, "continue"), theme, language
+        )
     elif state.status in ("game_over", "won"):
         key = "won" if state.status == "won" else "game_over"
-        _draw_overlay(screen, layout, text(language, key), text(language, "restart_hint"), theme, language)
+        _draw_overlay(
+            screen, layout, text(language, key), text(language, "restart_hint"), theme, language
+        )
     if settings_open:
         _draw_settings(screen, theme_name, language, speed)
     elif mode_selecting:

@@ -1,8 +1,13 @@
 __pycache__/
 *.py[cod]
 .pytest_cache/
+.ruff_cache/
 .venv/
 venv/
+.eggs/
+*.egg-info/
+build/
+dist/
 .idea/
 .vscode/
 games/game_2048/.player_data.json

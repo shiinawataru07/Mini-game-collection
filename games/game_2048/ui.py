@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from functools import lru_cache
+from functools import cache
 
 import pygame
 
@@ -19,8 +19,7 @@ from .config import (
     Theme,
     text,
 )
-from .logic import GameState
-from .logic import SUPPORTED_BOARD_SIZES
+from .logic import SUPPORTED_BOARD_SIZES, GameState
 
 
 @dataclass(frozen=True)
@@ -58,7 +57,7 @@ def read_from_clipboard() -> str | None:
         return None
 
 
-@lru_cache(maxsize=None)
+@cache
 def _font(
     size: int,
     language: Language = DEFAULT_LANGUAGE,
@@ -313,9 +312,7 @@ def _draw_settings(
     screen.blit(title, (modal.left + 24, modal.top + 14))
     _draw_button(screen, controls.close, "X", theme.empty_cell, theme.text, 24, "en")
 
-    section = _font(21, language, bold=True).render(
-        text(language, "color_theme"), True, theme.text
-    )
+    section = _font(21, language, bold=True).render(text(language, "color_theme"), True, theme.text)
     screen.blit(section, (modal.left + 24, modal.top + 54))
     for name, rect in controls.themes.items():
         option = THEMES[name]
@@ -363,9 +360,7 @@ def _draw_settings(
             theme.accent,
         )
 
-    ai_label = _font(20, language, bold=True).render(
-        text(language, "ai_player"), True, theme.text
-    )
+    ai_label = _font(20, language, bold=True).render(text(language, "ai_player"), True, theme.text)
     screen.blit(ai_label, (modal.left + 24, modal.top + 325))
     speed_label = text(language, "ai_speed").format(speed=text(language, ai_speed))
     _draw_button(
@@ -384,19 +379,36 @@ def _draw_settings(
     )
     screen.blit(best, (modal.left + 24, modal.top + 390))
     _draw_button(
-        screen, controls.copy_save, text(language, "copy_save"), theme.empty_cell,
-        theme.text, 17, language, theme.board,
+        screen,
+        controls.copy_save,
+        text(language, "copy_save"),
+        theme.empty_cell,
+        theme.text,
+        17,
+        language,
+        theme.board,
     )
     _draw_button(
-        screen, controls.load_save, text(language, "load_save"), theme.empty_cell,
-        theme.text, 17, language, theme.board,
+        screen,
+        controls.load_save,
+        text(language, "load_save"),
+        theme.empty_cell,
+        theme.text,
+        17,
+        language,
+        theme.board,
     )
     if notice:
         rendered = _font(16, language).render(notice, True, theme.text)
         screen.blit(rendered, (modal.left + 24, modal.top + 456))
     _draw_button(
-        screen, controls.restart, text(language, "restart"), theme.accent,
-        theme.light_text, 22, language,
+        screen,
+        controls.restart,
+        text(language, "restart"),
+        theme.accent,
+        theme.light_text,
+        22,
+        language,
     )
 
 
@@ -435,8 +447,14 @@ def draw_game(
     title = _font(64, "en", bold=True).render("2048", True, theme.text)
     screen.blit(title, (margin, 20))
     _draw_button(
-        screen, settings_rect, text(language, "settings"), theme.empty_cell,
-        theme.text, 22, language, theme.board,
+        screen,
+        settings_rect,
+        text(language, "settings"),
+        theme.empty_cell,
+        theme.text,
+        22,
+        language,
+        theme.board,
     )
     _draw_button(
         screen,
@@ -478,9 +496,7 @@ def draw_game(
         show_game_over=show_game_over,
     )
     if motions is not None:
-        _draw_moving_tiles(
-            screen, motions, animation_progress, theme, board_rect, len(state.board)
-        )
+        _draw_moving_tiles(screen, motions, animation_progress, theme, board_rect, len(state.board))
     if settings_open:
         _draw_settings(
             screen,

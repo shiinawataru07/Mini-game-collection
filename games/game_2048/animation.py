@@ -61,10 +61,7 @@ def build_tile_motions(board: Board, direction: Direction) -> list[TileMotion]:
             start, value = sources[source_index]
             destination = coordinates[target_index]
             motions.append(TileMotion(value, start, destination))
-            if (
-                source_index + 1 < len(sources)
-                and value == sources[source_index + 1][1]
-            ):
+            if source_index + 1 < len(sources) and value == sources[source_index + 1][1]:
                 second_start, second_value = sources[source_index + 1]
                 motions.append(TileMotion(second_value, second_start, destination))
                 source_index += 2
@@ -135,11 +132,7 @@ def spawn_pop_scale(progress: float) -> float:
 def animation_tile_scales(
     animation: MoveAnimation, progress: float
 ) -> dict[tuple[int, int], float]:
-    scales = {
-        position: merge_pop_scale(progress)
-        for position in animation.merged_positions
-    }
+    scales = {position: merge_pop_scale(progress) for position in animation.merged_positions}
     if animation.spawned_position is not None:
         scales[animation.spawned_position] = spawn_pop_scale(progress)
     return scales
-

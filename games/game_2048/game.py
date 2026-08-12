@@ -233,9 +233,8 @@ def run() -> Navigation:
                 layout = page_layout(screen.get_size())
                 ai_toggle_rect = layout["ai_toggle"]
                 settings_rect = layout["settings"]
-                if (
-                    isinstance(ai_toggle_rect, pygame.Rect)
-                    and ai_toggle_rect.collidepoint(event.pos)
+                if isinstance(ai_toggle_rect, pygame.Rect) and ai_toggle_rect.collidepoint(
+                    event.pos
                 ):
                     ai_enabled = not ai_enabled if not state.game_over else False
                     next_ai_move_at = now

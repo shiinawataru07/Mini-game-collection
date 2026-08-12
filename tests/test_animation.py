@@ -10,6 +10,7 @@ from games.game_2048.animation import (
     spawn_pop_scale,
 )
 from games.game_2048.logic import GameState
+
 from tests.support import FixedRandom
 
 
@@ -32,9 +33,7 @@ class MoveAnimationTests(unittest.TestCase):
         self.assertEqual([motion.end for motion in motions], [(0, 0), (0, 0), (0, 1)])
 
     def test_move_animation_identifies_merge_and_spawn_positions(self):
-        state = GameState(
-            [[2, 2, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]]
-        )
+        state = GameState([[2, 2, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]])
         animation = build_move_animation(state, "left", 1000, FixedRandom())
         self.assertIsNotNone(animation)
         self.assertEqual(animation.merged_positions, frozenset({(0, 0)}))
@@ -42,9 +41,7 @@ class MoveAnimationTests(unittest.TestCase):
         self.assertEqual(animation.gained_score, 4)
 
     def test_invalid_move_does_not_create_animation(self):
-        state = GameState(
-            [[2, 4, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]]
-        )
+        state = GameState([[2, 4, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]])
         self.assertIsNone(build_move_animation(state, "left", 0, FixedRandom()))
 
     def test_merge_and_spawn_scales_have_expected_keyframes(self):
@@ -56,9 +53,7 @@ class MoveAnimationTests(unittest.TestCase):
         self.assertAlmostEqual(spawn_pop_scale(1.0), 1.0)
 
     def test_animation_scales_apply_to_merge_and_spawn_only(self):
-        state = GameState(
-            [[2, 2, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]]
-        )
+        state = GameState([[2, 2, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]])
         animation = build_move_animation(state, "left", 0, FixedRandom())
         scales = animation_tile_scales(animation, 0.5)
         self.assertEqual(set(scales), {(0, 0), (0, 1)})
@@ -68,4 +63,3 @@ class MoveAnimationTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-

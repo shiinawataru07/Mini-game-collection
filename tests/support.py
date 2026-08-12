@@ -10,4 +10,3 @@ class FixedRandom:
 
     def random(self) -> float:
         return self.random_value
-

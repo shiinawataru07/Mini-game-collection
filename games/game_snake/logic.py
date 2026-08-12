@@ -109,11 +109,17 @@ def create_maze(width: int, height: int, snake: tuple[Cell, ...] = ()) -> frozen
 
     def vertical(x: int, start: int, end: int, gaps: set[int]) -> None:
         if 0 < x < width - 1:
-            walls.update((x, row) for row in range(max(1, start), min(height - 1, end)) if row not in gaps)
+            walls.update(
+                (x, row) for row in range(max(1, start), min(height - 1, end)) if row not in gaps
+            )
 
     def horizontal(row: int, start: int, end: int, gaps: set[int]) -> None:
         if 0 < row < height - 1:
-            walls.update((column, row) for column in range(max(1, start), min(width - 1, end)) if column not in gaps)
+            walls.update(
+                (column, row)
+                for column in range(max(1, start), min(width - 1, end))
+                if column not in gaps
+            )
 
     if width == GRID_WIDTH and height == GRID_HEIGHT:
         vertical(4, 1, 14, {4, 9})
@@ -232,7 +238,8 @@ def advance(state: GameState, rng=None) -> StepResult:
             replace(
                 state,
                 snake=new_snake,
-                score=state.score + (FOOD_SCORE if ate_food else BONUS_FOOD_SCORE if ate_bonus else 0),
+                score=state.score
+                + (FOOD_SCORE if ate_food else BONUS_FOOD_SCORE if ate_bonus else 0),
                 status="won",
                 steps=state.steps + 1,
                 food=None,

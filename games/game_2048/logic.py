@@ -51,7 +51,7 @@ def merge_line(line: list[int]) -> tuple[list[int], int]:
 
 
 def _transpose(board: Board) -> Board:
-    return [list(column) for column in zip(*board)]
+    return [list(column) for column in zip(*board, strict=True)]
 
 
 def _move_left(board: Board) -> tuple[Board, int]:
