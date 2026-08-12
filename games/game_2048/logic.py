@@ -10,6 +10,7 @@ Board = list[list[int]]
 Direction = Literal["up", "down", "left", "right"]
 
 BOARD_SIZE = 4
+SUPPORTED_BOARD_SIZES = (3, 4, 5)
 NEW_TILE_FOUR_CHANCE = 0.1
 
 
@@ -23,6 +24,8 @@ class GameState:
 
 
 def create_empty_board(size: int = BOARD_SIZE) -> Board:
+    if size not in SUPPORTED_BOARD_SIZES:
+        raise ValueError(f"Unsupported board size: {size}")
     return [[0 for _ in range(size)] for _ in range(size)]
 
 

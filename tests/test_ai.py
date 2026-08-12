@@ -91,7 +91,15 @@ class AiTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             choose_move([[0] * 4 for _ in range(4)], depth=0)
 
+    def test_ai_supports_three_and_five_square_boards(self):
+        for size in (3, 5):
+            with self.subTest(size=size):
+                board = [[0 for _ in range(size)] for _ in range(size)]
+                board[0][0] = 2
+                board[0][1] = 2
+                legal_directions = {direction for direction, _, _ in legal_moves(board)}
+                self.assertIn(choose_move(board, depth=2), legal_directions)
+
 
 if __name__ == "__main__":
     unittest.main()
-

@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 
-from .logic import BOARD_SIZE, Board, GameState, can_move
+from .logic import Board, GameState, SUPPORTED_BOARD_SIZES, can_move
 
 SAVE_VERSION = 1
 PLAYER_DATA_PATH = Path(__file__).with_name(".player_data.json")
@@ -52,13 +52,14 @@ def _is_non_negative_integer(value) -> bool:
 
 
 def _validate_saved_board(board) -> Board:
-    if not isinstance(board, list) or len(board) != BOARD_SIZE:
-        raise ValueError("The save must contain a 4x4 board.")
+    if not isinstance(board, list) or len(board) not in SUPPORTED_BOARD_SIZES:
+        raise ValueError("The save must contain a supported square board.")
 
+    size = len(board)
     validated: Board = []
     for row in board:
-        if not isinstance(row, list) or len(row) != BOARD_SIZE:
-            raise ValueError("The save must contain a 4x4 board.")
+        if not isinstance(row, list) or len(row) != size:
+            raise ValueError("The save must contain a supported square board.")
 
         validated_row: list[int] = []
         for value in row:
@@ -159,4 +160,3 @@ def save_best_score(score: int, path: Path = PLAYER_DATA_PATH) -> bool:
         return True
     except OSError:
         return False
-

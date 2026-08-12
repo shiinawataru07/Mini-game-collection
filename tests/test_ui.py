@@ -24,7 +24,7 @@ class UiSettingsTests(unittest.TestCase):
         self.assertEqual(TEXTS["zh"]["pause_ai"], "暂停 AI")
 
     def test_layout_stays_inside_different_window_sizes(self):
-        for window_size in ((360, 500), (500, 620), (900, 700)):
+        for window_size in ((420, 580), (600, 760), (1000, 800)):
             with self.subTest(window_size=window_size):
                 width, height = window_size
                 layout = page_layout(window_size)
@@ -40,7 +40,7 @@ class UiSettingsTests(unittest.TestCase):
                 self.assertLessEqual(ai_toggle.bottom, board.top)
 
     def test_settings_controls_stay_inside_dialog(self):
-        controls = settings_controls((360, 500))
+        controls = settings_controls((420, 580))
         clickable = (
             controls.close,
             controls.ai_speed,
@@ -49,11 +49,13 @@ class UiSettingsTests(unittest.TestCase):
             controls.restart,
             *controls.themes.values(),
             *controls.languages.values(),
+            *controls.board_sizes.values(),
         )
         for control in clickable:
             self.assertTrue(controls.modal.contains(control))
         self.assertEqual(set(controls.themes), set(THEMES))
         self.assertEqual(set(controls.languages), {"en", "zh"})
+        self.assertEqual(set(controls.board_sizes), {3, 4, 5})
 
 
 if __name__ == "__main__":

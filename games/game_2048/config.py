@@ -9,10 +9,10 @@ Color = tuple[int, int, int]
 Language = Literal["en", "zh"]
 AiSpeed = Literal["slow", "normal", "fast"]
 
-WINDOW_WIDTH = 500
-WINDOW_HEIGHT = 620
-MIN_WINDOW_WIDTH = 360
-MIN_WINDOW_HEIGHT = 500
+WINDOW_WIDTH = 600
+WINDOW_HEIGHT = 760
+MIN_WINDOW_WIDTH = 420
+MIN_WINDOW_HEIGHT = 580
 FPS = 60
 
 SLIDE_ANIMATION_MS = 100
@@ -140,6 +140,7 @@ TEXTS: dict[Language, dict[str, str]] = {
         "slow": "Slow",
         "normal": "Normal",
         "fast": "Fast",
+        "board_size": "Board size",
     },
     "zh": {
         "settings": "设置",
@@ -169,6 +170,7 @@ TEXTS: dict[Language, dict[str, str]] = {
         "slow": "慢速",
         "normal": "标准",
         "fast": "快速",
+        "board_size": "棋盘尺寸",
     },
 }
 

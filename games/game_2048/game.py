@@ -75,6 +75,7 @@ def run() -> None:
     clock = pygame.time.Clock()
 
     state = new_game()
+    board_size = len(state.board)
     best_score = load_best_score()
     theme_name = DEFAULT_THEME
     language: Language = DEFAULT_LANGUAGE
@@ -135,7 +136,7 @@ def run() -> None:
                     else:
                         running = False
                 elif not settings_open and animation is None and event.key == pygame.K_r:
-                    state = new_game()
+                    state = new_game(board_size)
                     ai_enabled = False
                     queued_direction = None
                     score_popup = None
@@ -163,7 +164,7 @@ def run() -> None:
                     settings_open = False
                     settings_notice = ""
                 elif controls.restart.collidepoint(event.pos):
-                    state = new_game()
+                    state = new_game(board_size)
                     ai_enabled = False
                     animation = None
                     queued_direction = None
@@ -194,6 +195,7 @@ def run() -> None:
                             settings_notice = text(language, "invalid_save")
                         else:
                             state = saved.state
+                            board_size = len(state.board)
                             best_score = max(best_score, saved.best_score, state.score)
                             theme_name = saved.theme
                             language = cast(Language, saved.language)
@@ -204,6 +206,16 @@ def run() -> None:
                             save_best_score(best_score)
                             settings_notice = text(language, "load_success")
                 else:
+                    for selected_size, rect in controls.board_sizes.items():
+                        if rect.collidepoint(event.pos) and selected_size != board_size:
+                            board_size = selected_size
+                            state = new_game(board_size)
+                            ai_enabled = False
+                            animation = None
+                            queued_direction = None
+                            score_popup = None
+                            settings_notice = ""
+                            break
                     for name, rect in controls.themes.items():
                         if rect.collidepoint(event.pos):
                             theme_name = name
@@ -240,7 +252,8 @@ def run() -> None:
             and not state.game_over
             and now >= next_ai_move_at
         ):
-            direction = choose_move(state.board, depth=AI_SEARCH_DEPTH)
+            search_depth = 2 if board_size == 5 else AI_SEARCH_DEPTH
+            direction = choose_move(state.board, depth=search_depth)
             if direction is None:
                 ai_enabled = False
             else:
@@ -294,6 +307,7 @@ def run() -> None:
                 current_time=now,
                 ai_enabled=ai_enabled,
                 ai_speed=ai_speed,
+                board_size=board_size,
             )
 
         pygame.display.flip()

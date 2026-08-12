@@ -36,6 +36,25 @@ class SaveDataTests(unittest.TestCase):
         self.assertEqual(saved.language, "zh")
         self.assertEqual(json.loads(value)["game"], "2048")
 
+    def test_three_and_five_square_boards_round_trip(self):
+        for size in (3, 5):
+            with self.subTest(size=size):
+                state = GameState([[0 for _ in range(size)] for _ in range(size)])
+                state.board[0][0] = 2
+                value = create_save_json(state, 0, "warm", "en")
+                saved = parse_save_json(value, set(THEMES), set(TEXTS))
+                self.assertEqual(saved.state, state)
+
+    def test_unsupported_or_non_square_board_is_rejected(self):
+        payload = json.loads(create_save_json(self.state, 256, "warm", "en"))
+        payload["state"]["board"] = [[0] * 6 for _ in range(6)]
+        with self.assertRaises(ValueError):
+            parse_save_json(json.dumps(payload))
+
+        payload["state"]["board"] = [[0] * 3 for _ in range(4)]
+        with self.assertRaises(ValueError):
+            parse_save_json(json.dumps(payload))
+
     def test_invalid_json_and_invalid_tiles_are_rejected(self):
         with self.assertRaises(ValueError):
             parse_save_json("not json")
@@ -70,4 +89,3 @@ class SaveDataTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-

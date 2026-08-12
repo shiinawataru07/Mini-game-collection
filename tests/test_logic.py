@@ -66,6 +66,21 @@ class BoardMovementTests(unittest.TestCase):
 
 
 class GameStateTests(unittest.TestCase):
+    def test_supported_board_sizes_create_square_games(self):
+        for size in (3, 4, 5):
+            with self.subTest(size=size):
+                state = new_game(size=size, rng=FixedRandom())
+                self.assertEqual(len(state.board), size)
+                self.assertTrue(all(len(row) == size for row in state.board))
+                self.assertEqual(
+                    sum(value != 0 for row in state.board for value in row),
+                    2,
+                )
+
+    def test_unsupported_board_size_is_rejected(self):
+        with self.assertRaises(ValueError):
+            new_game(size=6)
+
     def test_random_tile_can_be_two_or_four(self):
         board = create_empty_board()
         with_two = add_random_tile(board, FixedRandom(0.5))
@@ -117,7 +132,7 @@ class GameStateTests(unittest.TestCase):
         self.assertTrue(apply_move(GameState(ended), "left").game_over)
 
     def test_new_game_can_be_used_to_restart(self):
-        restarted = new_game(size=2, rng=FixedRandom())
+        restarted = new_game(size=3, rng=FixedRandom())
         self.assertEqual(restarted.score, 0)
         self.assertFalse(restarted.game_over)
         self.assertEqual(sum(value != 0 for row in restarted.board for value in row), 2)
@@ -125,4 +140,3 @@ class GameStateTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-
