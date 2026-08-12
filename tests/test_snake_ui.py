@@ -48,7 +48,9 @@ class SnakeUiTests(unittest.TestCase):
         controls = mode_controls((560, 520))
         self.assertTrue(controls.modal.contains(controls.classic))
         self.assertTrue(controls.modal.contains(controls.wrap))
+        self.assertTrue(controls.modal.contains(controls.maze))
         self.assertFalse(controls.classic.colliderect(controls.wrap))
+        self.assertFalse(controls.wrap.colliderect(controls.maze))
 
 
 if __name__ == "__main__":

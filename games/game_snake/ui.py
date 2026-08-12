@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass
 from functools import lru_cache
 
@@ -9,6 +10,7 @@ import pygame
 
 from .config import (
     DEFAULT_LANGUAGE,
+    BONUS_FOOD_DURATION_MS,
     SPEED_ORDER,
     THEMES,
     Language,
@@ -48,6 +50,7 @@ class ModeControls:
     modal: pygame.Rect
     classic: pygame.Rect
     wrap: pygame.Rect
+    maze: pygame.Rect
 
 
 @lru_cache(maxsize=None)
@@ -127,13 +130,15 @@ def settings_controls(window_size: tuple[int, int]) -> SettingsControls:
 
 def mode_controls(window_size: tuple[int, int]) -> ModeControls:
     width, height = window_size
-    modal = pygame.Rect(0, 0, min(520, width - 36), min(330, height - 36))
+    modal = pygame.Rect(0, 0, min(700, width - 36), min(350, height - 36))
     modal.center = (width // 2, height // 2)
-    gap = 18
-    card_width = (modal.width - 54 - gap) // 2
-    classic = pygame.Rect(modal.left + 27, modal.top + 105, card_width, 155)
+    gap = 12
+    card_width = (modal.width - 54 - gap * 2) // 3
+    classic = pygame.Rect(modal.left + 27, modal.top + 105, card_width, 175)
     wrap = pygame.Rect(classic.right + gap, classic.top, card_width, 155)
-    return ModeControls(modal, classic, wrap)
+    wrap.height = classic.height
+    maze = pygame.Rect(wrap.right + gap, classic.top, card_width, classic.height)
+    return ModeControls(modal, classic, wrap, maze)
 
 
 def _draw_button(
@@ -187,6 +192,13 @@ def _draw_board(screen: pygame.Surface, state: GameState, layout: Layout, theme:
         y = layout.board.top + row * layout.cell_size
         pygame.draw.line(screen, theme.grid, (layout.board.left, y), (layout.board.right, y))
 
+    for cell in state.walls:
+        wall_rect = _cell_rect(layout, cell, max(1, layout.cell_size // 14))
+        pygame.draw.rect(screen, theme.maze_wall, wall_rect, border_radius=max(2, layout.cell_size // 7))
+        highlight = wall_rect.inflate(-max(3, layout.cell_size // 4), -max(3, layout.cell_size // 4))
+        if highlight.width > 0 and highlight.height > 0:
+            pygame.draw.rect(screen, theme.grid, highlight, width=1, border_radius=2)
+
     if state.food is not None:
         food_rect = _cell_rect(layout, state.food, max(2, layout.cell_size // 7))
         center = food_rect.center
@@ -194,6 +206,33 @@ def _draw_board(screen: pygame.Surface, state: GameState, layout: Layout, theme:
         pygame.draw.circle(screen, theme.food, center, radius)
         leaf_rect = pygame.Rect(center[0] + radius // 5, center[1] - radius, radius, max(2, radius // 2))
         pygame.draw.ellipse(screen, theme.food_detail, leaf_rect)
+
+    if state.bonus_food is not None:
+        bonus_rect = _cell_rect(layout, state.bonus_food, max(2, layout.cell_size // 9))
+        center = bonus_rect.center
+        radius = max(4, min(bonus_rect.width, bonus_rect.height) // 2)
+        pygame.draw.circle(screen, theme.bonus_food, center, radius)
+        diamond_radius = max(2, radius // 2)
+        pygame.draw.polygon(
+            screen,
+            theme.bonus_detail,
+            (
+                (center[0], center[1] - diamond_radius),
+                (center[0] + diamond_radius, center[1]),
+                (center[0], center[1] + diamond_radius),
+                (center[0] - diamond_radius, center[1]),
+            ),
+        )
+        timer_fraction = max(0.0, min(1.0, state.bonus_remaining_ms / BONUS_FOOD_DURATION_MS))
+        timer_rect = bonus_rect.inflate(5, 5)
+        pygame.draw.arc(
+            screen,
+            theme.bonus_detail,
+            timer_rect,
+            -math.pi / 2,
+            -math.pi / 2 + math.tau * timer_fraction,
+            max(2, layout.cell_size // 12),
+        )
 
     for index in range(len(state.snake) - 1, -1, -1):
         cell = state.snake[index]
@@ -289,20 +328,27 @@ def _draw_mode_selection(
 
     title = _font(29, language, True).render(text(language, "choose_mode"), True, theme.text)
     screen.blit(title, title.get_rect(center=(controls.modal.centerx, controls.modal.top + 48)))
-    for mode, rect in (("classic", controls.classic), ("wrap", controls.wrap)):
+    for mode, rect in (
+        ("classic", controls.classic),
+        ("wrap", controls.wrap),
+        ("maze", controls.maze),
+    ):
         hovered = rect.collidepoint(pygame.mouse.get_pos())
         pygame.draw.rect(screen, theme.background, rect, border_radius=14)
         pygame.draw.rect(screen, theme.accent if hovered else theme.grid, rect, width=3 if hovered else 1, border_radius=14)
         mode_title = _font(23, language, True).render(text(language, mode), True, theme.text)
-        shortcut = _font(18, language, True).render("1" if mode == "classic" else "2", True, theme.accent)
+        shortcut_text = {"classic": "1", "wrap": "2", "maze": "3"}[mode]
+        shortcut = _font(18, language, True).render(shortcut_text, True, theme.accent)
         screen.blit(shortcut, shortcut.get_rect(center=(rect.centerx, rect.top + 30)))
         screen.blit(mode_title, mode_title.get_rect(center=(rect.centerx, rect.top + 72)))
         description_font = _font(14, language)
-        words = text(language, f"{mode}_desc").split(" ")
+        description_text = text(language, f"{mode}_desc")
+        separator = " " if " " in description_text else ""
+        words = description_text.split(" ") if separator else list(description_text)
         lines: list[str] = []
         current = ""
         for word in words:
-            candidate = word if not current else f"{current} {word}"
+            candidate = word if not current else f"{current}{separator}{word}"
             if current and description_font.size(candidate)[0] > rect.width - 18:
                 lines.append(current)
                 current = word
@@ -310,7 +356,7 @@ def _draw_mode_selection(
                 current = candidate
         if current:
             lines.append(current)
-        for index, line in enumerate(lines[:2]):
+        for index, line in enumerate(lines[:3]):
             description = description_font.render(line, True, theme.muted_text)
             screen.blit(description, description.get_rect(center=(rect.centerx, rect.top + 108 + index * 20)))
 
@@ -368,7 +414,10 @@ def draw_game(
 
     _draw_board(screen, state, layout, theme)
 
-    hint = _font(15, language).render(text(language, "hint"), True, theme.muted_text)
+    hint_text = text(language, "hint")
+    if state.bonus_food is not None:
+        hint_text = f"{text(language, 'bonus_food')} · {state.bonus_remaining_ms / 1000:.1f}s"
+    hint = _font(15, language).render(hint_text, True, theme.muted_text)
     hint_y = min(screen.get_height() - 24, layout.board.bottom + 22)
     screen.blit(hint, hint.get_rect(center=(screen.get_width() // 2, hint_y)))
 

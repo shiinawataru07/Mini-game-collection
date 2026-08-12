@@ -19,6 +19,9 @@ GRID_WIDTH = 24
 GRID_HEIGHT = 18
 INITIAL_SNAKE_LENGTH = 4
 FOOD_SCORE = 10
+BONUS_FOOD_SCORE = 50
+BONUS_FOOD_EVERY = 5
+BONUS_FOOD_DURATION_MS = 5000
 
 SPEEDS: dict[Speed, float] = {
     "slow": 5.0,
@@ -45,6 +48,9 @@ class Theme:
     snake_detail: Color
     food: Color
     food_detail: Color
+    bonus_food: Color
+    bonus_detail: Color
+    maze_wall: Color
     accent: Color
     overlay: Color
 
@@ -62,6 +68,9 @@ THEMES: dict[str, Theme] = {
         snake_detail=(225, 242, 215),
         food=(218, 73, 65),
         food_detail=(72, 132, 67),
+        bonus_food=(247, 190, 54),
+        bonus_detail=(255, 245, 174),
+        maze_wall=(116, 91, 65),
         accent=(231, 145, 65),
         overlay=(35, 53, 34),
     ),
@@ -77,6 +86,9 @@ THEMES: dict[str, Theme] = {
         snake_detail=(225, 255, 244),
         food=(255, 104, 112),
         food_detail=(116, 220, 145),
+        bonus_food=(255, 203, 77),
+        bonus_detail=(255, 245, 185),
+        maze_wall=(99, 115, 139),
         accent=(245, 188, 90),
         overlay=(11, 17, 27),
     ),
@@ -92,6 +104,9 @@ THEMES: dict[str, Theme] = {
         snake_detail=(224, 250, 252),
         food=(239, 106, 76),
         food_detail=(54, 143, 101),
+        bonus_food=(255, 194, 67),
+        bonus_detail=(255, 244, 174),
+        maze_wall=(69, 113, 135),
         accent=(48, 139, 187),
         overlay=(24, 51, 62),
     ),
@@ -130,6 +145,10 @@ TEXTS: dict[Language, dict[str, str]] = {
         "wrap": "Wrap-around",
         "wrap_short": "Wrap",
         "wrap_desc": "Exit one edge and enter the opposite edge",
+        "maze": "Maze",
+        "maze_short": "Maze",
+        "maze_desc": "Navigate corridors and avoid maze walls",
+        "bonus_food": "Bonus food",
         "ready": "Choose a direction to start",
         "paused": "Paused",
         "game_over": "Game Over",
@@ -167,6 +186,10 @@ TEXTS: dict[Language, dict[str, str]] = {
         "wrap": "里出外进模式",
         "wrap_short": "穿墙",
         "wrap_desc": "离开一侧后从相对一侧进入",
+        "maze": "迷宫模式",
+        "maze_short": "迷宫",
+        "maze_desc": "在迷宫通道中移动并避开墙体",
+        "bonus_food": "奖励食物",
         "ready": "按方向键开始游戏",
         "paused": "游戏已暂停",
         "game_over": "游戏结束",

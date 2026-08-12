@@ -23,7 +23,16 @@ from .config import (
     Speed,
     move_interval_ms,
 )
-from .logic import Direction, GameMode, advance, change_direction, new_game, start_or_turn, toggle_pause
+from .logic import (
+    Direction,
+    GameMode,
+    advance,
+    change_direction,
+    elapse_bonus_timer,
+    new_game,
+    start_or_turn,
+    toggle_pause,
+)
 from .persistence import load_player_data, save_player_data
 from .ui import draw_game, mode_controls, settings_controls
 
@@ -62,7 +71,8 @@ def run() -> Navigation:
     running = True
 
     while running:
-        elapsed_ms = min(clock.tick(FPS), 250)
+        elapsed_ms = clock.tick(FPS)
+        simulation_elapsed_ms = min(elapsed_ms, 250)
         layout = draw_game(
             screen,
             state,
@@ -94,8 +104,20 @@ def run() -> Navigation:
                         settings_open = False
                     else:
                         running = False
-                elif mode_selecting and event.key in (pygame.K_1, pygame.K_KP1, pygame.K_2, pygame.K_KP2):
-                    mode: GameMode = "classic" if event.key in (pygame.K_1, pygame.K_KP1) else "wrap"
+                elif mode_selecting and event.key in (
+                    pygame.K_1,
+                    pygame.K_KP1,
+                    pygame.K_2,
+                    pygame.K_KP2,
+                    pygame.K_3,
+                    pygame.K_KP3,
+                ):
+                    if event.key in (pygame.K_1, pygame.K_KP1):
+                        mode: GameMode = "classic"
+                    elif event.key in (pygame.K_2, pygame.K_KP2):
+                        mode = "wrap"
+                    else:
+                        mode = "maze"
                     state = new_game(state.width, state.height, mode)
                     mode_selecting = False
                     accumulator = 0.0
@@ -134,6 +156,8 @@ def run() -> Navigation:
                     selected_mode = "classic"
                 elif controls.wrap.collidepoint(event.pos):
                     selected_mode = "wrap"
+                elif controls.maze.collidepoint(event.pos):
+                    selected_mode = "maze"
                 if selected_mode is not None:
                     state = new_game(state.width, state.height, selected_mode)
                     mode_selecting = False
@@ -175,7 +199,8 @@ def run() -> Navigation:
             continue
 
         if state.status == "running":
-            accumulator += elapsed_ms
+            state = elapse_bonus_timer(state, elapsed_ms)
+            accumulator += simulation_elapsed_ms
             interval = move_interval_ms(speed)
             while accumulator >= interval and state.status == "running":
                 accumulator -= interval
