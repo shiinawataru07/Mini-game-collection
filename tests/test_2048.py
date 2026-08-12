@@ -1,17 +1,32 @@
 """Tests for 2048 rules, themes, and responsive layout."""
 
+import json
+import tempfile
 import unittest
+from pathlib import Path
 
-from games.game_2048.game import DEFAULT_THEME, THEMES, _page_layout, _settings_controls
+from games.game_2048.game import (
+    DEFAULT_LANGUAGE,
+    DEFAULT_THEME,
+    TEXTS,
+    THEMES,
+    _page_layout,
+    _settings_controls,
+    build_tile_motions,
+    load_best_score,
+    save_best_score,
+)
 from games.game_2048.logic import (
     GameState,
     add_random_tile,
     apply_move,
     can_move,
+    create_save_json,
     create_empty_board,
     merge_line,
     move_board,
     new_game,
+    parse_save_json,
 )
 
 
@@ -157,6 +172,12 @@ class UiSettingsTests(unittest.TestCase):
         self.assertEqual(DEFAULT_THEME, "warm")
         self.assertEqual(set(THEMES), {"warm", "blue", "green"})
 
+    def test_english_and_chinese_are_available(self):
+        self.assertEqual(DEFAULT_LANGUAGE, "en")
+        self.assertEqual(set(TEXTS), {"en", "zh"})
+        self.assertEqual(TEXTS["en"]["settings"], "Settings")
+        self.assertEqual(TEXTS["zh"]["settings"], "设置")
+
     def test_layout_stays_inside_different_window_sizes(self):
         for window_size in ((360, 500), (500, 620), (900, 700)):
             with self.subTest(window_size=window_size):
@@ -172,13 +193,119 @@ class UiSettingsTests(unittest.TestCase):
                 self.assertLessEqual(settings.right, width)
 
     def test_settings_controls_stay_inside_dialog(self):
-        modal, close, theme_buttons, restart = _settings_controls((360, 500))
+        (
+            modal,
+            close,
+            theme_buttons,
+            language_buttons,
+            copy_save,
+            load_save,
+            restart,
+        ) = _settings_controls((360, 500))
 
         self.assertTrue(modal.contains(close))
         self.assertTrue(modal.contains(restart))
         self.assertEqual(set(theme_buttons), set(THEMES))
+        self.assertEqual(set(language_buttons), {"en", "zh"})
         for button in theme_buttons.values():
             self.assertTrue(modal.contains(button))
+        for button in language_buttons.values():
+            self.assertTrue(modal.contains(button))
+        self.assertTrue(modal.contains(copy_save))
+        self.assertTrue(modal.contains(load_save))
+
+
+class MoveAnimationTests(unittest.TestCase):
+    def test_each_existing_tile_gets_one_motion(self):
+        board = [
+            [2, 0, 2, 0],
+            [4, 8, 0, 0],
+            [0, 0, 0, 0],
+            [0, 0, 0, 16],
+        ]
+
+        for direction in ("up", "down", "left", "right"):
+            with self.subTest(direction=direction):
+                motions = build_tile_motions(board, direction)
+                self.assertEqual(len(motions), 5)
+
+    def test_merging_tiles_share_the_same_destination(self):
+        board = [
+            [2, 2, 2, 0],
+            [0, 0, 0, 0],
+            [0, 0, 0, 0],
+            [0, 0, 0, 0],
+        ]
+
+        motions = build_tile_motions(board, "left")
+
+        self.assertEqual([motion.start for motion in motions], [(0, 0), (0, 1), (0, 2)])
+        self.assertEqual([motion.end for motion in motions], [(0, 0), (0, 0), (0, 1)])
+
+
+class SaveDataTests(unittest.TestCase):
+    def setUp(self):
+        self.state = GameState(
+            board=[
+                [2, 4, 8, 16],
+                [32, 64, 0, 0],
+                [0, 0, 0, 0],
+                [0, 0, 0, 0],
+            ],
+            score=256,
+            game_over=False,
+        )
+
+    def test_save_json_round_trip_preserves_game_information(self):
+        save_text = create_save_json(self.state, 1024, "green", "zh")
+
+        saved = parse_save_json(
+            save_text,
+            allowed_themes=set(THEMES),
+            allowed_languages=set(TEXTS),
+        )
+
+        self.assertEqual(saved.state, self.state)
+        self.assertEqual(saved.best_score, 1024)
+        self.assertEqual(saved.theme, "green")
+        self.assertEqual(saved.language, "zh")
+        self.assertEqual(json.loads(save_text)["game"], "2048")
+
+    def test_invalid_json_and_invalid_tiles_are_rejected(self):
+        with self.assertRaises(ValueError):
+            parse_save_json("not json")
+
+        payload = json.loads(create_save_json(self.state, 256, "warm", "en"))
+        payload["state"]["board"][0][0] = 3
+        with self.assertRaises(ValueError):
+            parse_save_json(json.dumps(payload))
+
+    def test_wrong_game_and_unsupported_preferences_are_rejected(self):
+        payload = json.loads(create_save_json(self.state, 256, "warm", "en"))
+        payload["game"] = "snake"
+        with self.assertRaises(ValueError):
+            parse_save_json(json.dumps(payload))
+
+        payload["game"] = "2048"
+        payload["preferences"]["theme"] = "unknown"
+        with self.assertRaises(ValueError):
+            parse_save_json(json.dumps(payload), allowed_themes=set(THEMES))
+
+    def test_best_score_never_falls_below_current_score(self):
+        save_text = create_save_json(self.state, 10, "warm", "en")
+        saved = parse_save_json(save_text)
+        self.assertEqual(saved.best_score, self.state.score)
+
+    def test_best_score_is_persisted_locally(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "player.json"
+
+            self.assertEqual(load_best_score(path), 0)
+            self.assertTrue(save_best_score(4096, path))
+            self.assertEqual(load_best_score(path), 4096)
+
+            path.write_text("broken", encoding="utf-8")
+            self.assertEqual(load_best_score(path), 0)
 
 
 if __name__ == "__main__":
