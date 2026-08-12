@@ -64,7 +64,9 @@ mini-game-collection/
 ├── main.py                         # 小游戏合集入口
 ├── games/
 │   ├── __init__.py
-│   ├── menu.py                     # 游戏选择界面
+│   ├── registry.py                 # 游戏元数据和启动入口注册表
+│   ├── menu.py                     # 由注册表驱动的游戏选择界面
+│   ├── common/                     # 少量跨游戏复用的字体、按钮和窗口工具
 │   ├── game_2048/
 │   │   ├── README.md               # 2048 详细介绍和玩法
 │   │   ├── logic.py                # 棋盘、移动、合并和游戏状态
@@ -83,14 +85,17 @@ mini-game-collection/
 │       └── game.py                 # 输入缓冲和固定步进主循环
 ├── docs/
 │   └── images/                     # 游戏说明文档使用的图片
-├── tests/                          # 各模块自动化测试
+├── tests/
+│   ├── common/                     # 注册表和合集菜单测试
+│   ├── game_2048/                  # 2048 自动化测试
+│   └── game_snake/                 # 贪吃蛇自动化测试
 ├── pyproject.toml                  # 项目元数据、依赖和 Ruff 配置
 ├── requirements.txt
 ├── .gitignore
 └── README.md                       # 项目概览
 ```
 
-新增游戏时，应在 `games/` 中建立独立目录，并在该目录内提供 `README.md`，记录游戏功能、玩法、设置和模块职责。对应测试统一放在 `tests/` 中。
+新增游戏时，应在 `games/` 中建立独立目录，在 `games/registry.py` 注册元数据、预览图和启动入口，并在游戏目录内提供 `README.md`。对应测试放入 `tests/<游戏名>/`，跨游戏基础设施测试放入 `tests/common/`。
 
 ## 技术栈
 

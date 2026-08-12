@@ -4,9 +4,11 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass
-from functools import cache
 
 import pygame
+
+from games.common.controls import draw_button
+from games.common.fonts import get_font
 
 from .config import (
     BONUS_FOOD_DURATION_MS,
@@ -20,6 +22,8 @@ from .config import (
     text,
 )
 from .logic import Direction, GameState
+
+ENGLISH_FONT_SCALE = 1.15
 
 
 @dataclass(frozen=True)
@@ -53,18 +57,22 @@ class ModeControls:
     maze: pygame.Rect
 
 
-@cache
+def _scaled_font_size(size: int, language: Language) -> int:
+    """Compensate for the default Latin font's smaller visual size."""
+
+    return round(size * ENGLISH_FONT_SCALE) if language == "en" else size
+
+
+def _font_language_for_text(label: str, language: Language) -> Language:
+    """Use a CJK-capable font whenever a label contains Chinese characters."""
+
+    if any("\u3400" <= character <= "\u9fff" for character in label):
+        return "zh"
+    return language
+
+
 def _font(size: int, language: Language = DEFAULT_LANGUAGE, bold: bool = False) -> pygame.font.Font:
-    size = max(14, size)
-    font_path = None
-    if language == "zh":
-        for name in ("microsoftyahei", "simhei", "simsun", "notosanscjksc"):
-            font_path = pygame.font.match_font(name)
-            if font_path:
-                break
-    font = pygame.font.Font(font_path, size) if font_path else pygame.font.Font(None, size)
-    font.set_bold(bold)
-    return font
+    return get_font(_scaled_font_size(size, language), language, bold, minimum_size=14)
 
 
 def page_layout(window_size: tuple[int, int], grid_size: tuple[int, int]) -> Layout:
@@ -155,11 +163,19 @@ def _draw_button(
     enabled: bool = True,
 ) -> None:
     color = theme.accent if active else theme.panel
-    pygame.draw.rect(screen, color, rect, border_radius=10)
-    pygame.draw.rect(screen, theme.grid, rect, width=1, border_radius=10)
     text_color = theme.panel if active else (theme.text if enabled else theme.muted_text)
-    surface = _font(18, language, True).render(label, True, text_color)
-    screen.blit(surface, surface.get_rect(center=rect.center))
+    font_language = _font_language_for_text(label, language)
+    draw_button(
+        screen,
+        rect,
+        label,
+        color,
+        text_color,
+        _scaled_font_size(18, font_language),
+        font_language,
+        border_color=theme.grid,
+        border_radius=10,
+    )
 
 
 def _draw_stat(

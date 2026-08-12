@@ -11,7 +11,7 @@ from games.game_2048.animation import (
 )
 from games.game_2048.logic import GameState
 
-from tests.support import FixedRandom
+from tests.game_2048.support import FixedRandom
 
 
 class MoveAnimationTests(unittest.TestCase):

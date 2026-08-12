@@ -13,7 +13,7 @@ from games.game_2048.logic import (
     new_game,
 )
 
-from tests.support import FixedRandom
+from tests.game_2048.support import FixedRandom
 
 
 class MergeLineTests(unittest.TestCase):

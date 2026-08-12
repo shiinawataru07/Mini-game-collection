@@ -7,6 +7,8 @@ from typing import Literal, cast
 
 import pygame
 
+from games.common.window import open_resizable_window, resize_resizable_window
+
 from .config import (
     DEFAULT_LANGUAGE,
     DEFAULT_SPEED,
@@ -53,8 +55,7 @@ KEY_DIRECTIONS: dict[int, Direction] = {
 def run() -> Navigation:
     """Run Snake until the player returns to the collection menu or quits."""
 
-    screen = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT), pygame.RESIZABLE)
-    pygame.display.set_caption("Mini Game Collection - Snake")
+    screen = open_resizable_window((WINDOW_WIDTH, WINDOW_HEIGHT), "Mini Game Collection - Snake")
     clock = pygame.time.Clock()
 
     player_data = load_player_data()
@@ -94,9 +95,9 @@ def run() -> Navigation:
                 continue
 
             if event.type == pygame.VIDEORESIZE:
-                screen = pygame.display.set_mode(
-                    (max(MIN_WINDOW_WIDTH, event.w), max(MIN_WINDOW_HEIGHT, event.h)),
-                    pygame.RESIZABLE,
+                screen = resize_resizable_window(
+                    (event.w, event.h),
+                    (MIN_WINDOW_WIDTH, MIN_WINDOW_HEIGHT),
                 )
                 continue
 

@@ -24,9 +24,9 @@ BONUS_FOOD_EVERY = 5
 BONUS_FOOD_DURATION_MS = 5000
 
 SPEEDS: dict[Speed, float] = {
-    "slow": 5.0,
-    "normal": 8.0,
-    "fast": 12.0,
+    "slow": 4.0,
+    "normal": 6.0,
+    "fast": 9.0,
 }
 SPEED_ORDER: tuple[Speed, ...] = ("slow", "normal", "fast")
 

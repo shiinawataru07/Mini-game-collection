@@ -40,19 +40,29 @@ class UiSettingsTests(unittest.TestCase):
                 self.assertLessEqual(ai_toggle.bottom, board.top)
 
     def test_settings_controls_stay_inside_dialog(self):
-        controls = settings_controls((420, 580))
-        clickable = (
-            controls.close,
-            controls.ai_speed,
-            controls.copy_save,
-            controls.load_save,
-            controls.restart,
-            *controls.themes.values(),
-            *controls.languages.values(),
-            *controls.board_sizes.values(),
-        )
-        for control in clickable:
-            self.assertTrue(controls.modal.contains(control))
+        for window_size in ((420, 580), (600, 760), (1000, 800)):
+            with self.subTest(window_size=window_size):
+                controls = settings_controls(window_size)
+                clickable = (
+                    controls.close,
+                    controls.ai_speed,
+                    controls.copy_save,
+                    controls.load_save,
+                    controls.restart,
+                    *controls.themes.values(),
+                    *controls.languages.values(),
+                    *controls.board_sizes.values(),
+                )
+                for control in clickable:
+                    self.assertTrue(controls.modal.contains(control))
+
+                content_controls = clickable[1:]
+                for index, control in enumerate(content_controls):
+                    for other in content_controls[index + 1 :]:
+                        self.assertFalse(control.colliderect(other))
+
+        controls = settings_controls((600, 760))
+        self.assertEqual(controls.modal.size, (560, 680))
         self.assertEqual(set(controls.themes), set(THEMES))
         self.assertEqual(set(controls.languages), {"en", "zh"})
         self.assertEqual(set(controls.board_sizes), {3, 4, 5})

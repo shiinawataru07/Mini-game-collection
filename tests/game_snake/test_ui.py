@@ -2,10 +2,24 @@
 
 import unittest
 
-from games.game_snake.ui import mode_controls, page_layout, settings_controls
+from games.game_snake.ui import (
+    _font_language_for_text,
+    _scaled_font_size,
+    mode_controls,
+    page_layout,
+    settings_controls,
+)
 
 
 class SnakeUiTests(unittest.TestCase):
+    def test_chinese_label_uses_cjk_font_in_english_interface(self):
+        self.assertEqual(_font_language_for_text("中文", "en"), "zh")
+        self.assertEqual(_font_language_for_text("English", "en"), "en")
+
+    def test_only_english_font_size_is_increased(self):
+        self.assertGreater(_scaled_font_size(18, "en"), 18)
+        self.assertEqual(_scaled_font_size(18, "zh"), 18)
+
     def test_board_uses_square_cells_and_stays_inside_window(self):
         for window_size in ((560, 520), (820, 700), (1200, 800)):
             with self.subTest(window_size=window_size):

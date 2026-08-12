@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from functools import cache
 
 import pygame
+
+from games.common.controls import draw_button
+from games.common.fonts import get_font
 
 from .animation import ScorePopup, TileMotion
 from .config import (
@@ -57,22 +59,12 @@ def read_from_clipboard() -> str | None:
         return None
 
 
-@cache
 def _font(
     size: int,
     language: Language = DEFAULT_LANGUAGE,
     bold: bool = False,
 ) -> pygame.font.Font:
-    size = max(16, size)
-    font_path = None
-    if language == "zh":
-        for name in ("microsoftyahei", "simhei", "simsun", "notosanscjksc"):
-            font_path = pygame.font.match_font(name)
-            if font_path:
-                break
-    font = pygame.font.Font(font_path, size) if font_path else pygame.font.Font(None, size)
-    font.set_bold(bold)
-    return font
+    return get_font(size, language, bold, minimum_size=16)
 
 
 def page_layout(window_size: tuple[int, int]) -> dict[str, pygame.Rect | int]:
@@ -99,40 +91,62 @@ def settings_controls(
     """Calculate the settings dialog and all clickable controls."""
 
     width, height = window_size
-    modal = pygame.Rect(0, 0, min(500, width - 32), min(560, height - 32))
+    modal = pygame.Rect(0, 0, min(560, width - 32), min(680, height - 32))
     modal.center = (width // 2, height // 2)
     close = pygame.Rect(modal.right - 48, modal.top + 14, 32, 32)
 
+    content_left = modal.left + 28
+    content_width = modal.width - 56
+    scale = min(1.0, modal.height / 680)
+
+    def y(offset: int) -> int:
+        return modal.top + round(offset * scale)
+
+    button_height = max(32, round(40 * scale))
+
     theme_buttons = {
-        name: pygame.Rect(modal.left + 24, modal.top + 78 + index * 40, modal.width - 48, 36)
+        name: pygame.Rect(
+            content_left,
+            y(106 + index * 50),
+            content_width,
+            button_height,
+        )
         for index, name in enumerate(THEMES)
     }
-    language_width = (modal.width - 58) // 2
+    column_gap = 12
+    language_width = (content_width - column_gap) // 2
     language_buttons: dict[Language, pygame.Rect] = {
-        "en": pygame.Rect(modal.left + 24, modal.top + 220, language_width, 34),
+        "en": pygame.Rect(content_left, y(286), language_width, button_height),
         "zh": pygame.Rect(
-            modal.left + 34 + language_width,
-            modal.top + 220,
+            content_left + language_width + column_gap,
+            y(286),
             language_width,
-            34,
+            button_height,
         ),
     }
-    size_gap = 8
-    size_width = (modal.width - 48 - size_gap * 2) // 3
+    size_gap = 10
+    size_width = (content_width - size_gap * 2) // 3
     board_sizes = {
         size: pygame.Rect(
-            modal.left + 24 + index * (size_width + size_gap),
-            modal.top + 280,
+            content_left + index * (size_width + size_gap),
+            y(372),
             size_width,
-            36,
+            button_height,
         )
         for index, size in enumerate(SUPPORTED_BOARD_SIZES)
     }
-    ai_speed = pygame.Rect(modal.left + 24, modal.top + 348, modal.width - 48, 36)
-    data_width = (modal.width - 58) // 2
-    copy_save = pygame.Rect(modal.left + 24, modal.top + 416, data_width, 36)
-    load_save = pygame.Rect(modal.left + 34 + data_width, modal.top + 416, data_width, 36)
-    restart = pygame.Rect(modal.left + 24, modal.bottom - 54, modal.width - 48, 40)
+    ai_speed = pygame.Rect(content_left, y(460), content_width, button_height)
+    data_width = (content_width - column_gap) // 2
+    copy_save = pygame.Rect(content_left, y(554), data_width, button_height)
+    load_save = pygame.Rect(
+        content_left + data_width + column_gap,
+        y(554),
+        data_width,
+        button_height,
+    )
+    restart = pygame.Rect(
+        content_left, modal.bottom - max(50, round(58 * scale)), content_width, 42
+    )
     return SettingsControls(
         modal,
         close,
@@ -156,11 +170,18 @@ def _draw_button(
     language: Language,
     border_color: Color | None = None,
 ) -> None:
-    pygame.draw.rect(screen, background, rect, border_radius=8)
-    if border_color:
-        pygame.draw.rect(screen, border_color, rect, width=3, border_radius=8)
-    rendered = _font(font_size, language, bold=True).render(label, True, foreground)
-    screen.blit(rendered, rendered.get_rect(center=rect.center))
+    draw_button(
+        screen,
+        rect,
+        label,
+        background,
+        foreground,
+        font_size,
+        language,
+        border_color=border_color,
+        border_width=3,
+        minimum_font_size=16,
+    )
 
 
 def _board_geometry(board_rect: pygame.Rect, dimension: int) -> tuple[int, int]:
@@ -308,12 +329,15 @@ def _draw_settings(
     pygame.draw.rect(screen, theme.background, modal, border_radius=14)
     pygame.draw.rect(screen, theme.board, modal, width=2, border_radius=14)
 
-    title = _font(36, language, bold=True).render(text(language, "settings"), True, theme.text)
-    screen.blit(title, (modal.left + 24, modal.top + 14))
+    title_size = 36 if modal.height >= 620 else 30
+    title = _font(title_size, language, bold=True).render(
+        text(language, "settings"), True, theme.text
+    )
+    screen.blit(title, (modal.left + 28, modal.top + 16))
     _draw_button(screen, controls.close, "X", theme.empty_cell, theme.text, 24, "en")
 
     section = _font(21, language, bold=True).render(text(language, "color_theme"), True, theme.text)
-    screen.blit(section, (modal.left + 24, modal.top + 54))
+    screen.blit(section, (modal.left + 28, controls.themes["warm"].top - 28))
     for name, rect in controls.themes.items():
         option = THEMES[name]
         border = theme.accent if name == selected_theme else theme.board
@@ -329,7 +353,7 @@ def _draw_settings(
             pygame.draw.rect(screen, option.tiles[value], preview, border_radius=4)
 
     label = _font(21, language, bold=True).render(text(language, "language"), True, theme.text)
-    screen.blit(label, (modal.left + 24, modal.top + 195))
+    screen.blit(label, (modal.left + 28, controls.languages["en"].top - 28))
     for option_language, rect in controls.languages.items():
         selected = option_language == language
         _draw_button(
@@ -346,7 +370,8 @@ def _draw_settings(
     size_label = _font(20, language, bold=True).render(
         text(language, "board_size"), True, theme.text
     )
-    screen.blit(size_label, (modal.left + 24, modal.top + 257))
+    first_board_size = SUPPORTED_BOARD_SIZES[0]
+    screen.blit(size_label, (modal.left + 28, controls.board_sizes[first_board_size].top - 28))
     for size, rect in controls.board_sizes.items():
         selected = size == board_size
         _draw_button(
@@ -361,7 +386,7 @@ def _draw_settings(
         )
 
     ai_label = _font(20, language, bold=True).render(text(language, "ai_player"), True, theme.text)
-    screen.blit(ai_label, (modal.left + 24, modal.top + 325))
+    screen.blit(ai_label, (modal.left + 28, controls.ai_speed.top - 28))
     speed_label = text(language, "ai_speed").format(speed=text(language, ai_speed))
     _draw_button(
         screen,
@@ -377,7 +402,7 @@ def _draw_settings(
     best = _font(19, language, bold=True).render(
         f"{text(language, 'best_score')}: {best_score}", True, theme.text
     )
-    screen.blit(best, (modal.left + 24, modal.top + 390))
+    screen.blit(best, (modal.left + 28, controls.copy_save.top - 28))
     _draw_button(
         screen,
         controls.copy_save,
@@ -400,7 +425,10 @@ def _draw_settings(
     )
     if notice:
         rendered = _font(16, language).render(notice, True, theme.text)
-        screen.blit(rendered, (modal.left + 24, modal.top + 456))
+        notice_y = min(
+            controls.restart.top - rendered.get_height() - 5, controls.copy_save.bottom + 5
+        )
+        screen.blit(rendered, (modal.left + 28, notice_y))
     _draw_button(
         screen,
         controls.restart,

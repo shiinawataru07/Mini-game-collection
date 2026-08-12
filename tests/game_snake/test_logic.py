@@ -203,9 +203,9 @@ class SnakeLogicTests(unittest.TestCase):
         self.assertIsNone(spawn_food(2, 2, ((0, 0), (1, 0), (0, 1), (1, 1))))
 
     def test_speed_levels_are_fixed_and_ordered(self):
-        self.assertEqual(moves_per_second("slow"), 5.0)
-        self.assertEqual(moves_per_second("normal"), 8.0)
-        self.assertEqual(moves_per_second("fast"), 12.0)
+        self.assertEqual(moves_per_second("slow"), 4.0)
+        self.assertEqual(moves_per_second("normal"), 6.0)
+        self.assertEqual(moves_per_second("fast"), 9.0)
         self.assertGreater(move_interval_ms("slow"), move_interval_ms("fast"))
 
 

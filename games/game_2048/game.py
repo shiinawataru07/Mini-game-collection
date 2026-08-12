@@ -6,6 +6,8 @@ from typing import Literal, cast
 
 import pygame
 
+from games.common.window import open_resizable_window, resize_resizable_window
+
 from .ai import choose_move
 from .animation import MoveAnimation, ScorePopup, animation_tile_scales, build_move_animation
 from .config import (
@@ -71,8 +73,7 @@ def _score_popup(animation: MoveAnimation) -> ScorePopup | None:
 def run() -> Navigation:
     """Start the resizable 2048 game window."""
 
-    screen = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT), pygame.RESIZABLE)
-    pygame.display.set_caption("Mini Game Collection - 2048")
+    screen = open_resizable_window((WINDOW_WIDTH, WINDOW_HEIGHT), "Mini Game Collection - 2048")
     clock = pygame.time.Clock()
 
     state = new_game()
@@ -122,12 +123,9 @@ def run() -> Navigation:
                 continue
 
             if event.type == pygame.VIDEORESIZE:
-                screen = pygame.display.set_mode(
-                    (
-                        max(MIN_WINDOW_WIDTH, event.w),
-                        max(MIN_WINDOW_HEIGHT, event.h),
-                    ),
-                    pygame.RESIZABLE,
+                screen = resize_resizable_window(
+                    (event.w, event.h),
+                    (MIN_WINDOW_WIDTH, MIN_WINDOW_HEIGHT),
                 )
                 continue
 
