@@ -5,8 +5,9 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Literal
 
-Color = tuple[int, int, int]
-Language = Literal["en", "zh"]
+from games.common.i18n import bind_translations
+from games.common.types import Color, Language
+
 AiSpeed = Literal["slow", "normal", "fast"]
 
 WINDOW_WIDTH = 600
@@ -175,7 +176,4 @@ TEXTS: dict[Language, dict[str, str]] = {
 }
 
 
-def text(language: Language, key: str) -> str:
-    """Return translated UI text."""
-
-    return TEXTS[language][key]
+text = bind_translations(TEXTS)

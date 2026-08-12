@@ -2,9 +2,15 @@
 
 from __future__ import annotations
 
-import json
 from dataclasses import dataclass, field
 from pathlib import Path
+
+from games.common.json_store import (
+    choice_or_default,
+    is_non_negative_int,
+    load_json_object,
+    save_json_object,
+)
 
 from .config import (
     DEFAULT_CUSTOM_SPEC,
@@ -40,40 +46,33 @@ class PlayerData:
 
 
 def load_player_data(path: Path = PLAYER_DATA_PATH) -> PlayerData:
-    try:
-        payload = json.loads(path.read_text(encoding="utf-8"))
-        raw_times = payload.get("best_times_ms", {})
-        times = _default_best_times()
-        if isinstance(raw_times, dict):
-            for difficulty in DIFFICULTIES:
-                value = raw_times.get(difficulty)
-                if isinstance(value, int) and not isinstance(value, bool) and value >= 0:
-                    times[difficulty] = value
-        theme = payload.get("theme", DEFAULT_THEME)
-        language = payload.get("language", DEFAULT_LANGUAGE)
-        difficulty = payload.get("difficulty", DEFAULT_DIFFICULTY)
-        if theme not in THEMES:
-            theme = DEFAULT_THEME
-        if language not in TEXTS:
-            language = DEFAULT_LANGUAGE
-        if difficulty not in DIFFICULTY_ORDER:
-            difficulty = DEFAULT_DIFFICULTY
-        custom = normalize_custom_spec(
-            payload.get("custom_width"),
-            payload.get("custom_height"),
-            payload.get("custom_mines"),
-        )
-        return PlayerData(
-            times,
-            theme,
-            language,
-            difficulty,
-            custom.width,
-            custom.height,
-            custom.mines,
-        )
-    except (OSError, json.JSONDecodeError, AttributeError, TypeError):
+    payload = load_json_object(path)
+    if payload is None:
         return PlayerData()
+    raw_times = payload.get("best_times_ms", {})
+    times = _default_best_times()
+    if isinstance(raw_times, dict):
+        for difficulty in DIFFICULTIES:
+            value = raw_times.get(difficulty)
+            if is_non_negative_int(value):
+                times[difficulty] = value
+    theme = choice_or_default(payload.get("theme"), THEMES, DEFAULT_THEME)
+    language = choice_or_default(payload.get("language"), TEXTS, DEFAULT_LANGUAGE)
+    difficulty = choice_or_default(payload.get("difficulty"), DIFFICULTY_ORDER, DEFAULT_DIFFICULTY)
+    custom = normalize_custom_spec(
+        payload.get("custom_width"),
+        payload.get("custom_height"),
+        payload.get("custom_mines"),
+    )
+    return PlayerData(
+        times,
+        theme,
+        language,
+        difficulty,
+        custom.width,
+        custom.height,
+        custom.mines,
+    )
 
 
 def update_best_time(data: PlayerData, difficulty: PresetDifficulty, elapsed_ms: int) -> PlayerData:
@@ -114,9 +113,7 @@ def save_player_data(data: PlayerData, path: Path = PLAYER_DATA_PATH) -> bool:
     times: dict[str, int | None] = {}
     for difficulty in DIFFICULTIES:
         value = data.best_times_ms.get(difficulty)
-        if value is not None and (
-            not isinstance(value, int) or isinstance(value, bool) or value < 0
-        ):
+        if value is not None and not is_non_negative_int(value):
             return False
         times[difficulty] = value
     payload = {
@@ -128,8 +125,4 @@ def save_player_data(data: PlayerData, path: Path = PLAYER_DATA_PATH) -> bool:
         "custom_height": data.custom_height,
         "custom_mines": data.custom_mines,
     }
-    try:
-        path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
-        return True
-    except OSError:
-        return False
+    return save_json_object(path, payload)

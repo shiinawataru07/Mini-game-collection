@@ -7,7 +7,7 @@ from dataclasses import dataclass
 
 import pygame
 
-from games.common.controls import draw_button
+from games.common.controls import draw_button, draw_overlay, draw_panel
 from games.common.fonts import get_font
 
 from .config import (
@@ -293,9 +293,7 @@ def _draw_overlay(
     theme: Theme,
     language: Language,
 ) -> None:
-    overlay = pygame.Surface(layout.board.size, pygame.SRCALPHA)
-    overlay.fill((*theme.overlay, 180))
-    screen.blit(overlay, layout.board)
+    draw_overlay(screen, theme.overlay, 180, layout.board)
     title_surface = _font(max(28, layout.cell_size * 2), language, True).render(
         title, True, (255, 255, 255)
     )
@@ -315,11 +313,15 @@ def _draw_settings(
 ) -> None:
     theme = THEMES[theme_name]
     controls = settings_controls(screen.get_size())
-    shade = pygame.Surface(screen.get_size(), pygame.SRCALPHA)
-    shade.fill((*theme.overlay, 150))
-    screen.blit(shade, (0, 0))
-    pygame.draw.rect(screen, theme.panel, controls.modal, border_radius=18)
-    pygame.draw.rect(screen, theme.grid, controls.modal, width=2, border_radius=18)
+    draw_overlay(screen, theme.overlay, 150)
+    draw_panel(
+        screen,
+        controls.modal,
+        theme.panel,
+        border_color=theme.grid,
+        border_width=2,
+        border_radius=18,
+    )
 
     title = _font(27, language, True).render(text(language, "settings_title"), True, theme.text)
     screen.blit(title, (controls.modal.left + 28, controls.modal.top + 20))
@@ -350,11 +352,15 @@ def _draw_mode_selection(
 ) -> None:
     theme = THEMES[theme_name]
     controls = mode_controls(screen.get_size())
-    shade = pygame.Surface(screen.get_size(), pygame.SRCALPHA)
-    shade.fill((*theme.overlay, 175))
-    screen.blit(shade, (0, 0))
-    pygame.draw.rect(screen, theme.panel, controls.modal, border_radius=20)
-    pygame.draw.rect(screen, theme.grid, controls.modal, width=2, border_radius=20)
+    draw_overlay(screen, theme.overlay, 175)
+    draw_panel(
+        screen,
+        controls.modal,
+        theme.panel,
+        border_color=theme.grid,
+        border_width=2,
+        border_radius=20,
+    )
 
     title = _font(29, language, True).render(text(language, "choose_mode"), True, theme.text)
     screen.blit(title, title.get_rect(center=(controls.modal.centerx, controls.modal.top + 48)))

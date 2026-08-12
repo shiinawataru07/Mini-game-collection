@@ -5,15 +5,16 @@ from __future__ import annotations
 from collections.abc import Callable
 from dataclasses import dataclass
 from importlib import import_module
-from typing import Literal, cast
+from typing import cast
 
 import pygame
 
+from games.common.types import Navigation
 from games.game_2048.preview import draw_preview as draw_2048_preview
 from games.game_minesweeper.preview import draw_preview as draw_minesweeper_preview
 from games.game_snake.preview import draw_preview as draw_snake_preview
+from games.game_tetris.preview import draw_preview as draw_tetris_preview
 
-Navigation = Literal["menu", "quit"]
 GameRunner = Callable[[], Navigation]
 PreviewRenderer = Callable[[pygame.Surface, pygame.Rect], None]
 
@@ -65,6 +66,15 @@ GAMES: tuple[GameDescriptor, ...] = (
         accent=(49, 110, 184),
         runner="games.game_minesweeper.game:run",
         preview=draw_minesweeper_preview,
+    ),
+    GameDescriptor(
+        id="tetris",
+        title="俄罗斯方块",
+        subtitle="堆叠消行 · 反应",
+        shortcut=4,
+        accent=(139, 116, 255),
+        runner="games.game_tetris.game:run",
+        preview=draw_tetris_preview,
     ),
 )
 

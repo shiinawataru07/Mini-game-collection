@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
-from typing import Literal, cast
+from typing import cast
 
 import pygame
 
+from games.common.types import Navigation
 from games.common.window import open_resizable_window, resize_resizable_window
 
 from .config import (
@@ -38,8 +39,6 @@ from .persistence import PlayerData, load_player_data, save_player_data, update_
 from .solver import Hint, find_hint
 from .sound import GameSounds, play_outcome_transition
 from .ui import cell_at_position, draw_game, page_layout, settings_controls
-
-Navigation = Literal["menu", "quit"]
 
 DIFFICULTY_KEYS: dict[int, Difficulty] = {
     pygame.K_1: "beginner",

@@ -13,8 +13,9 @@
 | 2048 | 已完成，可持续优化 | 移动棋盘并合并相同数字，在有限空间内挑战更高分数。支持多种棋盘尺寸、动画、JSON 存档和 AI 自动游玩。 | [查看玩法与功能](games/game_2048/README.md) |
 | 贪吃蛇 | 已完成，可持续优化 | 控制不断成长的蛇寻找食物并避开危险。支持三种模式、限时奖励食物和暂停设置。 | [查看玩法与功能](games/game_snake/README.md) |
 | 扫雷 | 已完成，可持续优化 | 翻开安全格并标记地雷。支持纯逻辑棋盘、求解器提示、三种经典难度、自定义棋盘和最佳时间记录。 | [查看玩法与功能](games/game_minesweeper/README.md) |
+| 俄罗斯方块 | 已完成，可持续优化 | 使用 SRS 旋转、7-bag、Hold 和 Ghost Piece 堆叠消行，随着等级提升挑战更快速度。 | [查看玩法与功能](games/game_tetris/README.md) |
 
-计划后续加入 Tetris、Tic-Tac-Toe 和 Maze 等游戏。
+计划后续加入 Tic-Tac-Toe 和 Maze 等游戏。
 
 ## 安装与运行
 
@@ -61,7 +62,7 @@ python -m pip install -r requirements.txt
 python main.py
 ```
 
-入口会显示游戏选择界面。可以使用鼠标选择，也可以按 `1` 启动 2048、按 `2` 启动贪吃蛇、按 `3` 启动扫雷。游戏内按 `Esc` 可以返回选择界面。
+入口会显示游戏选择界面。可以使用鼠标选择，也可以按 `1` 启动 2048、按 `2` 启动贪吃蛇、按 `3` 启动扫雷、按 `4` 启动俄罗斯方块。游戏内按 `Esc` 可以返回选择界面。
 
 ## 项目结构
 
@@ -75,7 +76,7 @@ mini-game-collection/
 │   ├── __init__.py
 │   ├── registry.py                 # 游戏元数据和启动入口注册表
 │   ├── menu.py                     # 由注册表驱动的游戏选择界面
-│   ├── common/                     # 少量跨游戏复用的字体、按钮和窗口工具
+│   ├── common/                     # 跨游戏类型、翻译、JSON、字体、控件和窗口工具
 │   ├── game_2048/
 │   │   ├── README.md               # 2048 详细介绍和玩法
 │   │   ├── logic.py                # 棋盘、移动、合并和游戏状态
@@ -86,21 +87,23 @@ mini-game-collection/
 │   │   ├── ui.py                   # Pygame 布局与绘制
 │   │   └── game.py                 # 输入处理和游戏主循环
 │   ├── game_snake/                 # 贪吃蛇规则、界面和主循环
-│   └── game_minesweeper/
-│       ├── README.md               # 扫雷详细介绍和玩法
-│       ├── logic.py                # 布雷、展开、标记和胜负规则
-│       ├── solver.py               # 纯逻辑求解、生成验证和提示
-│       ├── persistence.py          # 各难度最佳时间和偏好
-│       ├── config.py               # 难度、主题、文案和界面配置
-│       ├── ui.py                   # 响应式棋盘与绘制
-│       └── game.py                 # 输入、计时和游戏主循环
+│   ├── game_minesweeper/
+│   │   ├── README.md               # 扫雷详细介绍和玩法
+│   │   ├── logic.py                # 布雷、展开、标记和胜负规则
+│   │   ├── solver.py               # 纯逻辑求解、生成验证和提示
+│   │   ├── persistence.py          # 各难度最佳时间和偏好
+│   │   ├── config.py               # 难度、主题、文案和界面配置
+│   │   ├── ui.py                   # 响应式棋盘与绘制
+│   │   └── game.py                 # 输入、计时和游戏主循环
+│   └── game_tetris/                # 俄罗斯方块规则、SRS、输入、界面和主循环
 ├── docs/
 │   └── images/                     # 游戏说明文档使用的图片
 ├── tests/
 │   ├── common/                     # 注册表和合集菜单测试
 │   ├── game_2048/                  # 2048 自动化测试
 │   ├── game_snake/                 # 贪吃蛇自动化测试
-│   └── game_minesweeper/           # 扫雷自动化测试
+│   ├── game_minesweeper/           # 扫雷自动化测试
+│   └── game_tetris/                # 俄罗斯方块自动化测试
 ├── pyproject.toml                  # 项目元数据、依赖和 Ruff 配置
 ├── requirements.txt
 ├── .gitignore
@@ -149,7 +152,7 @@ GitHub Actions 会在每次推送和拉取请求时执行 Ruff，并在 Python 3
 
 ## 后续计划
 
-- 逐步加入 Tetris、Tic-Tac-Toe 和 Maze
+- 逐步加入 Tic-Tac-Toe 和 Maze
 - 只在多个游戏确实需要时提取共享组件和通用设置
 - 为新增游戏补充截图或演示 GIF
 - 使用 PyInstaller 提供无需安装 Python 的可执行版本

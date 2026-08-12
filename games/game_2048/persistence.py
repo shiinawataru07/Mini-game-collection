@@ -7,6 +7,12 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 
+from games.common.json_store import (
+    is_non_negative_int,
+    load_json_object,
+    save_json_object,
+)
+
 from .logic import SUPPORTED_BOARD_SIZES, Board, GameState, can_move
 
 SAVE_VERSION = 1
@@ -47,10 +53,6 @@ def create_save_json(
     return json.dumps(payload, ensure_ascii=False, indent=2)
 
 
-def _is_non_negative_integer(value) -> bool:
-    return isinstance(value, int) and not isinstance(value, bool) and value >= 0
-
-
 def _validate_saved_board(board) -> Board:
     if not isinstance(board, list) or len(board) not in SUPPORTED_BOARD_SIZES:
         raise ValueError("The save must contain a supported square board.")
@@ -63,7 +65,7 @@ def _validate_saved_board(board) -> Board:
 
         validated_row: list[int] = []
         for value in row:
-            is_tile = _is_non_negative_integer(value) and (
+            is_tile = is_non_negative_int(value) and (
                 value == 0 or (value >= 2 and value & (value - 1) == 0)
             )
             if not is_tile:
@@ -101,7 +103,7 @@ def parse_save_json(
     board = _validate_saved_board(raw_state.get("board"))
     score = raw_state.get("score")
     saved_game_over = raw_state.get("game_over")
-    if not _is_non_negative_integer(score):
+    if not is_non_negative_int(score):
         raise ValueError("The saved score must be a non-negative integer.")
     if not isinstance(saved_game_over, bool):
         raise ValueError("The saved game-over value must be true or false.")
@@ -111,7 +113,7 @@ def parse_save_json(
         raise ValueError("The saved game-over value does not match the board.")
 
     best_score = payload.get("best_score")
-    if not _is_non_negative_integer(best_score):
+    if not is_non_negative_int(best_score):
         raise ValueError("The saved best score must be a non-negative integer.")
 
     preferences = payload.get("preferences")
@@ -137,24 +139,15 @@ def parse_save_json(
 def load_best_score(path: Path = PLAYER_DATA_PATH) -> int:
     """Load the locally persisted best score, returning zero if unavailable."""
 
-    try:
-        payload = json.loads(path.read_text(encoding="utf-8"))
+    payload = load_json_object(path)
+    if payload is not None:
         score = payload.get("best_score")
-        if _is_non_negative_integer(score):
+        if is_non_negative_int(score):
             return score
-    except (OSError, json.JSONDecodeError, AttributeError):
-        pass
     return 0
 
 
 def save_best_score(score: int, path: Path = PLAYER_DATA_PATH) -> bool:
     """Persist the best score without interrupting the game on I/O errors."""
 
-    try:
-        path.write_text(
-            json.dumps({"best_score": max(0, score)}, indent=2),
-            encoding="utf-8",
-        )
-        return True
-    except OSError:
-        return False
+    return save_json_object(path, {"best_score": max(0, score)}, ensure_ascii=True)

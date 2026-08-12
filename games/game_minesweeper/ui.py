@@ -6,7 +6,7 @@ from dataclasses import dataclass
 
 import pygame
 
-from games.common.controls import draw_button
+from games.common.controls import draw_button, draw_overlay, draw_panel
 from games.common.fonts import get_font
 
 from .config import (
@@ -350,9 +350,7 @@ def _draw_result_overlay(
     panel = pygame.Rect(0, 0, min(330, layout.board.width - 24), 92)
     panel.center = layout.board.center
     shadow = panel.inflate(8, 8)
-    surface = pygame.Surface(shadow.size, pygame.SRCALPHA)
-    surface.fill((*theme.overlay, 190))
-    screen.blit(surface, shadow)
+    draw_overlay(screen, theme.overlay, 190, shadow)
     title_surface = _font(27, language, True).render(title, True, (255, 255, 255))
     subtitle_surface = _font(15, language).render(subtitle, True, (236, 240, 245))
     screen.blit(title_surface, title_surface.get_rect(center=(panel.centerx, panel.centery - 15)))
@@ -371,11 +369,15 @@ def _draw_settings(
 ) -> None:
     theme = THEMES[theme_name]
     controls = settings_controls(screen.get_size())
-    shade = pygame.Surface(screen.get_size(), pygame.SRCALPHA)
-    shade.fill((*theme.overlay, 165))
-    screen.blit(shade, (0, 0))
-    pygame.draw.rect(screen, theme.panel, controls.modal, border_radius=18)
-    pygame.draw.rect(screen, theme.grid, controls.modal, width=2, border_radius=18)
+    draw_overlay(screen, theme.overlay, 165)
+    draw_panel(
+        screen,
+        controls.modal,
+        theme.panel,
+        border_color=theme.grid,
+        border_width=2,
+        border_radius=18,
+    )
 
     title = _font(27, language, True).render(text(language, "settings_title"), True, theme.text)
     screen.blit(title, (controls.modal.left + 28, controls.modal.top + 20))

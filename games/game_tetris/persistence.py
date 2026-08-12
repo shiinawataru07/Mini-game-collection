@@ -1,4 +1,4 @@
-"""Local best-score and preference persistence for Snake."""
+"""Local records and preferences for Tetris."""
 
 from __future__ import annotations
 
@@ -12,15 +12,7 @@ from games.common.json_store import (
     save_json_object,
 )
 
-from .config import (
-    DEFAULT_LANGUAGE,
-    DEFAULT_SPEED,
-    DEFAULT_THEME,
-    SPEEDS,
-    TEXTS,
-    THEMES,
-    Speed,
-)
+from .config import DEFAULT_LANGUAGE, DEFAULT_THEME, TEXTS, THEMES, Language
 
 PLAYER_DATA_PATH = Path(__file__).with_name(".player_data.json")
 
@@ -28,9 +20,9 @@ PLAYER_DATA_PATH = Path(__file__).with_name(".player_data.json")
 @dataclass(frozen=True)
 class PlayerData:
     best_score: int = 0
+    best_lines: int = 0
     theme: str = DEFAULT_THEME
-    language: str = DEFAULT_LANGUAGE
-    speed: Speed = DEFAULT_SPEED
+    language: Language = DEFAULT_LANGUAGE
 
 
 def load_player_data(path: Path = PLAYER_DATA_PATH) -> PlayerData:
@@ -39,25 +31,19 @@ def load_player_data(path: Path = PLAYER_DATA_PATH) -> PlayerData:
         return PlayerData()
     return PlayerData(
         non_negative_int(payload.get("best_score")),
+        non_negative_int(payload.get("best_lines")),
         choice_or_default(payload.get("theme"), THEMES, DEFAULT_THEME),
         choice_or_default(payload.get("language"), TEXTS, DEFAULT_LANGUAGE),
-        choice_or_default(payload.get("speed"), SPEEDS, DEFAULT_SPEED),
     )
 
 
-def save_player_data(
-    best_score: int,
-    theme: str,
-    language: str,
-    path: Path = PLAYER_DATA_PATH,
-    speed: Speed = DEFAULT_SPEED,
-) -> bool:
-    if theme not in THEMES or language not in TEXTS or speed not in SPEEDS:
+def save_player_data(data: PlayerData, path: Path = PLAYER_DATA_PATH) -> bool:
+    if data.theme not in THEMES or data.language not in TEXTS:
         return False
     payload = {
-        "best_score": max(0, best_score),
-        "theme": theme,
-        "language": language,
-        "speed": speed,
+        "best_score": max(0, data.best_score),
+        "best_lines": max(0, data.best_lines),
+        "theme": data.theme,
+        "language": data.language,
     }
     return save_json_object(path, payload)

@@ -5,8 +5,9 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Literal
 
-Color = tuple[int, int, int]
-Language = Literal["en", "zh"]
+from games.common.i18n import bind_translations
+from games.common.types import Color, Language
+
 PresetDifficulty = Literal["beginner", "intermediate", "expert"]
 Difficulty = Literal["beginner", "intermediate", "expert", "custom"]
 CustomField = Literal["width", "height", "mines"]
@@ -231,5 +232,4 @@ TEXTS: dict[Language, dict[str, str]] = {
 }
 
 
-def text(language: Language, key: str) -> str:
-    return TEXTS[language][key]
+text = bind_translations(TEXTS)

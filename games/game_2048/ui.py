@@ -6,7 +6,7 @@ from dataclasses import dataclass
 
 import pygame
 
-from games.common.controls import draw_button
+from games.common.controls import draw_button, draw_overlay, draw_panel
 from games.common.fonts import get_font
 
 from .animation import ScorePopup, TileMotion
@@ -256,9 +256,7 @@ def _draw_board(
                     _draw_tile(screen, value, _scaled_rect(cell, scale), theme)
 
     if show_tiles and show_game_over and state.game_over:
-        overlay = pygame.Surface(board_rect.size, pygame.SRCALPHA)
-        overlay.fill((*theme.background, 215))
-        screen.blit(overlay, board_rect.topleft)
+        draw_overlay(screen, theme.background, 215, board_rect)
         title = _font(max(38, board_rect.width // 10), language, bold=True).render(
             text(language, "game_over"), True, theme.text
         )
@@ -323,11 +321,15 @@ def _draw_settings(
     controls = settings_controls(screen.get_size())
     modal = controls.modal
 
-    shade = pygame.Surface(screen.get_size(), pygame.SRCALPHA)
-    shade.fill((0, 0, 0, 90))
-    screen.blit(shade, (0, 0))
-    pygame.draw.rect(screen, theme.background, modal, border_radius=14)
-    pygame.draw.rect(screen, theme.board, modal, width=2, border_radius=14)
+    draw_overlay(screen, (0, 0, 0), 90)
+    draw_panel(
+        screen,
+        modal,
+        theme.background,
+        border_color=theme.board,
+        border_width=2,
+        border_radius=14,
+    )
 
     title_size = 36 if modal.height >= 620 else 30
     title = _font(title_size, language, bold=True).render(

@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
-from typing import Literal, cast
+from typing import cast
 
 import pygame
 
+from games.common.types import Navigation
 from games.common.window import open_resizable_window, resize_resizable_window
 
 from .ai import choose_move
@@ -57,8 +58,6 @@ KEY_DIRECTIONS: dict[int, Direction] = {
     pygame.K_RIGHT: "right",
     pygame.K_d: "right",
 }
-
-Navigation = Literal["menu", "quit"]
 
 
 def _score_popup(animation: MoveAnimation) -> ScorePopup | None:

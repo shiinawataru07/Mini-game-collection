@@ -3,10 +3,11 @@
 from __future__ import annotations
 
 from collections import deque
-from typing import Literal, cast
+from typing import cast
 
 import pygame
 
+from games.common.types import Navigation
 from games.common.window import open_resizable_window, resize_resizable_window
 
 from .config import (
@@ -37,8 +38,6 @@ from .logic import (
 )
 from .persistence import load_player_data, save_player_data
 from .ui import draw_game, mode_controls, settings_controls
-
-Navigation = Literal["menu", "quit"]
 
 KEY_DIRECTIONS: dict[int, Direction] = {
     pygame.K_UP: "up",
