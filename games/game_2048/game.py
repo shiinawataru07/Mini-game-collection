@@ -6,8 +6,13 @@ from typing import cast
 
 import pygame
 
+from .ai import choose_move
 from .animation import MoveAnimation, ScorePopup, animation_tile_scales, build_move_animation
 from .config import (
+    AI_MOVE_DELAYS,
+    AI_SEARCH_DEPTH,
+    AI_SPEED_ORDER,
+    DEFAULT_AI_SPEED,
     DEFAULT_LANGUAGE,
     DEFAULT_THEME,
     FPS,
@@ -21,6 +26,7 @@ from .config import (
     TOTAL_MOVE_ANIMATION_MS,
     WINDOW_HEIGHT,
     WINDOW_WIDTH,
+    AiSpeed,
     Language,
     text,
 )
@@ -72,6 +78,9 @@ def run() -> None:
     best_score = load_best_score()
     theme_name = DEFAULT_THEME
     language: Language = DEFAULT_LANGUAGE
+    ai_enabled = False
+    ai_speed: AiSpeed = DEFAULT_AI_SPEED
+    next_ai_move_at = 0
     settings_open = False
     settings_notice = ""
     animation: MoveAnimation | None = None
@@ -91,12 +100,17 @@ def run() -> None:
                 save_best_score(best_score)
             animation = None
 
+            if state.game_over:
+                ai_enabled = False
+
             if queued_direction is not None:
                 direction = queued_direction
                 queued_direction = None
                 animation = build_move_animation(state, direction, now)
                 if animation:
                     score_popup = _score_popup(animation)
+            elif ai_enabled:
+                next_ai_move_at = now + AI_MOVE_DELAYS[ai_speed]
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -122,9 +136,14 @@ def run() -> None:
                         running = False
                 elif not settings_open and animation is None and event.key == pygame.K_r:
                     state = new_game()
+                    ai_enabled = False
                     queued_direction = None
                     score_popup = None
+                elif not settings_open and event.key == pygame.K_SPACE:
+                    ai_enabled = not ai_enabled if not state.game_over else False
+                    next_ai_move_at = now
                 elif not settings_open and event.key in KEY_DIRECTIONS:
+                    ai_enabled = False
                     direction = KEY_DIRECTIONS[event.key]
                     if animation:
                         queued_direction = direction
@@ -138,31 +157,29 @@ def run() -> None:
                 continue
 
             if settings_open:
-                (
-                    _,
-                    close,
-                    theme_buttons,
-                    language_buttons,
-                    copy_save,
-                    load_save,
-                    restart,
-                ) = settings_controls(screen.get_size())
+                controls = settings_controls(screen.get_size())
 
-                if close.collidepoint(event.pos):
+                if controls.close.collidepoint(event.pos):
                     settings_open = False
                     settings_notice = ""
-                elif restart.collidepoint(event.pos):
+                elif controls.restart.collidepoint(event.pos):
                     state = new_game()
+                    ai_enabled = False
                     animation = None
                     queued_direction = None
                     score_popup = None
                     settings_open = False
                     settings_notice = ""
-                elif copy_save.collidepoint(event.pos):
+                elif controls.ai_speed.collidepoint(event.pos):
+                    speed_index = AI_SPEED_ORDER.index(ai_speed)
+                    ai_speed = AI_SPEED_ORDER[(speed_index + 1) % len(AI_SPEED_ORDER)]
+                    next_ai_move_at = now + AI_MOVE_DELAYS[ai_speed]
+                    settings_notice = ""
+                elif controls.copy_save.collidepoint(event.pos):
                     save_json = create_save_json(state, best_score, theme_name, language)
                     key = "save_copied" if copy_to_clipboard(save_json) else "clipboard_error"
                     settings_notice = text(language, key)
-                elif load_save.collidepoint(event.pos):
+                elif controls.load_save.collidepoint(event.pos):
                     save_json = read_from_clipboard()
                     if save_json is None:
                         settings_notice = text(language, "clipboard_error")
@@ -180,27 +197,58 @@ def run() -> None:
                             best_score = max(best_score, saved.best_score, state.score)
                             theme_name = saved.theme
                             language = cast(Language, saved.language)
+                            ai_enabled = False
                             animation = None
                             queued_direction = None
                             score_popup = None
                             save_best_score(best_score)
                             settings_notice = text(language, "load_success")
                 else:
-                    for name, rect in theme_buttons.items():
+                    for name, rect in controls.themes.items():
                         if rect.collidepoint(event.pos):
                             theme_name = name
                             settings_notice = ""
                             break
-                    for selected_language, rect in language_buttons.items():
+                    for selected_language, rect in controls.languages.items():
                         if rect.collidepoint(event.pos):
                             language = selected_language
                             settings_notice = ""
                             break
-            elif animation is None:
-                settings_rect = page_layout(screen.get_size())["settings"]
-                if isinstance(settings_rect, pygame.Rect) and settings_rect.collidepoint(event.pos):
+            else:
+                layout = page_layout(screen.get_size())
+                ai_toggle_rect = layout["ai_toggle"]
+                settings_rect = layout["settings"]
+                if (
+                    isinstance(ai_toggle_rect, pygame.Rect)
+                    and ai_toggle_rect.collidepoint(event.pos)
+                ):
+                    ai_enabled = not ai_enabled if not state.game_over else False
+                    next_ai_move_at = now
+                elif (
+                    animation is None
+                    and isinstance(settings_rect, pygame.Rect)
+                    and settings_rect.collidepoint(event.pos)
+                ):
                     settings_open = True
                     settings_notice = ""
+
+        if (
+            running
+            and ai_enabled
+            and not settings_open
+            and animation is None
+            and not state.game_over
+            and now >= next_ai_move_at
+        ):
+            direction = choose_move(state.board, depth=AI_SEARCH_DEPTH)
+            if direction is None:
+                ai_enabled = False
+            else:
+                animation = build_move_animation(state, direction, now)
+                if animation:
+                    score_popup = _score_popup(animation)
+                else:
+                    ai_enabled = False
 
         if animation:
             elapsed = now - animation.started_at
@@ -244,6 +292,8 @@ def run() -> None:
                 settings_notice=settings_notice,
                 score_popup=score_popup,
                 current_time=now,
+                ai_enabled=ai_enabled,
+                ai_speed=ai_speed,
             )
 
         pygame.display.flip()

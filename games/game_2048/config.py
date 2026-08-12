@@ -7,6 +7,7 @@ from typing import Literal
 
 Color = tuple[int, int, int]
 Language = Literal["en", "zh"]
+AiSpeed = Literal["slow", "normal", "fast"]
 
 WINDOW_WIDTH = 500
 WINDOW_HEIGHT = 620
@@ -18,9 +19,17 @@ SLIDE_ANIMATION_MS = 100
 TILE_EFFECT_ANIMATION_MS = 90
 TOTAL_MOVE_ANIMATION_MS = SLIDE_ANIMATION_MS + TILE_EFFECT_ANIMATION_MS
 SCORE_POPUP_MS = 650
+AI_SEARCH_DEPTH = 3
+AI_MOVE_DELAYS: dict[AiSpeed, int] = {
+    "slow": 600,
+    "normal": 280,
+    "fast": 40,
+}
+AI_SPEED_ORDER: tuple[AiSpeed, ...] = ("slow", "normal", "fast")
 
 DEFAULT_THEME = "warm"
 DEFAULT_LANGUAGE: Language = "en"
+DEFAULT_AI_SPEED: AiSpeed = "normal"
 
 
 @dataclass(frozen=True)
@@ -124,6 +133,13 @@ TEXTS: dict[Language, dict[str, str]] = {
         "load_success": "Save loaded successfully",
         "invalid_save": "Invalid save JSON",
         "clipboard_error": "Clipboard is unavailable",
+        "ai_player": "AI player",
+        "start_ai": "Start AI",
+        "pause_ai": "Pause AI",
+        "ai_speed": "Speed: {speed}",
+        "slow": "Slow",
+        "normal": "Normal",
+        "fast": "Fast",
     },
     "zh": {
         "settings": "设置",
@@ -146,6 +162,13 @@ TEXTS: dict[Language, dict[str, str]] = {
         "load_success": "读档成功",
         "invalid_save": "存档 JSON 无效",
         "clipboard_error": "无法访问剪贴板",
+        "ai_player": "AI 自动游玩",
+        "start_ai": "启动 AI",
+        "pause_ai": "暂停 AI",
+        "ai_speed": "速度：{speed}",
+        "slow": "慢速",
+        "normal": "标准",
+        "fast": "快速",
     },
 }
 
@@ -154,4 +177,3 @@ def text(language: Language, key: str) -> str:
     """Return translated UI text."""
 
     return TEXTS[language][key]
-

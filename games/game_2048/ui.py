@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from functools import lru_cache
 
 import pygame
@@ -12,12 +13,25 @@ from .config import (
     DEFAULT_THEME,
     SCORE_POPUP_MS,
     THEMES,
+    AiSpeed,
     Color,
     Language,
     Theme,
     text,
 )
 from .logic import GameState
+
+
+@dataclass(frozen=True)
+class SettingsControls:
+    modal: pygame.Rect
+    close: pygame.Rect
+    themes: dict[str, pygame.Rect]
+    languages: dict[Language, pygame.Rect]
+    ai_speed: pygame.Rect
+    copy_save: pygame.Rect
+    load_save: pygame.Rect
+    restart: pygame.Rect
 
 
 def copy_to_clipboard(value: str) -> bool:
@@ -65,28 +79,22 @@ def page_layout(window_size: tuple[int, int]) -> dict[str, pygame.Rect | int]:
 
     width, height = window_size
     margin = max(14, min(28, min(width, height) // 22))
-    board_top = max(120, min(145, height // 5 + 12))
+    board_top = max(148, min(160, height // 5 + 28))
     board_size = max(280, min(width - margin * 2, height - board_top - margin))
     board_left = (width - board_size) // 2
     settings_width = max(92, min(116, width // 4))
+    settings = pygame.Rect(width - margin - settings_width, 24, settings_width, 40)
     return {
         "margin": margin,
         "board": pygame.Rect(board_left, board_top, board_size, board_size),
-        "settings": pygame.Rect(width - margin - settings_width, 24, settings_width, 40),
+        "settings": settings,
+        "ai_toggle": pygame.Rect(settings.left, settings.bottom + 6, settings.width, 38),
     }
 
 
 def settings_controls(
     window_size: tuple[int, int],
-) -> tuple[
-    pygame.Rect,
-    pygame.Rect,
-    dict[str, pygame.Rect],
-    dict[Language, pygame.Rect],
-    pygame.Rect,
-    pygame.Rect,
-    pygame.Rect,
-]:
+) -> SettingsControls:
     """Calculate the settings dialog and all clickable controls."""
 
     width, height = window_size
@@ -95,24 +103,34 @@ def settings_controls(
     close = pygame.Rect(modal.right - 48, modal.top + 14, 32, 32)
 
     theme_buttons = {
-        name: pygame.Rect(modal.left + 24, modal.top + 88 + index * 48, modal.width - 48, 42)
+        name: pygame.Rect(modal.left + 24, modal.top + 78 + index * 40, modal.width - 48, 36)
         for index, name in enumerate(THEMES)
     }
     language_width = (modal.width - 58) // 2
     language_buttons: dict[Language, pygame.Rect] = {
-        "en": pygame.Rect(modal.left + 24, modal.top + 262, language_width, 38),
+        "en": pygame.Rect(modal.left + 24, modal.top + 220, language_width, 34),
         "zh": pygame.Rect(
             modal.left + 34 + language_width,
-            modal.top + 262,
+            modal.top + 220,
             language_width,
-            38,
+            34,
         ),
     }
+    ai_speed = pygame.Rect(modal.left + 24, modal.top + 280, modal.width - 48, 36)
     data_width = (modal.width - 58) // 2
-    copy_save = pygame.Rect(modal.left + 24, modal.top + 335, data_width, 38)
-    load_save = pygame.Rect(modal.left + 34 + data_width, modal.top + 335, data_width, 38)
-    restart = pygame.Rect(modal.left + 24, modal.bottom - 58, modal.width - 48, 42)
-    return modal, close, theme_buttons, language_buttons, copy_save, load_save, restart
+    copy_save = pygame.Rect(modal.left + 24, modal.top + 348, data_width, 36)
+    load_save = pygame.Rect(modal.left + 34 + data_width, modal.top + 348, data_width, 36)
+    restart = pygame.Rect(modal.left + 24, modal.bottom - 54, modal.width - 48, 40)
+    return SettingsControls(
+        modal,
+        close,
+        theme_buttons,
+        language_buttons,
+        ai_speed,
+        copy_save,
+        load_save,
+        restart,
+    )
 
 
 def _draw_button(
@@ -264,10 +282,11 @@ def _draw_settings(
     language: Language,
     best_score: int,
     notice: str,
+    ai_speed: AiSpeed,
 ) -> None:
     theme = THEMES[selected_theme]
     controls = settings_controls(screen.get_size())
-    modal, close, theme_buttons, language_buttons, copy_save, load_save, restart = controls
+    modal = controls.modal
 
     shade = pygame.Surface(screen.get_size(), pygame.SRCALPHA)
     shade.fill((0, 0, 0, 90))
@@ -277,20 +296,20 @@ def _draw_settings(
 
     title = _font(36, language, bold=True).render(text(language, "settings"), True, theme.text)
     screen.blit(title, (modal.left + 24, modal.top + 14))
-    _draw_button(screen, close, "X", theme.empty_cell, theme.text, 24, "en")
+    _draw_button(screen, controls.close, "X", theme.empty_cell, theme.text, 24, "en")
 
     section = _font(21, language, bold=True).render(
         text(language, "color_theme"), True, theme.text
     )
-    screen.blit(section, (modal.left + 24, modal.top + 61))
-    for name, rect in theme_buttons.items():
+    screen.blit(section, (modal.left + 24, modal.top + 54))
+    for name, rect in controls.themes.items():
         option = THEMES[name]
         border = theme.accent if name == selected_theme else theme.board
         pygame.draw.rect(screen, option.background, rect, border_radius=8)
         pygame.draw.rect(
             screen, border, rect, width=3 if name == selected_theme else 1, border_radius=8
         )
-        label = _font(21, language, bold=True).render(text(language, name), True, option.text)
+        label = _font(19, language, bold=True).render(text(language, name), True, option.text)
         screen.blit(label, (rect.left + 16, rect.centery - label.get_height() // 2))
         preview_left = rect.right - 80
         for index, value in enumerate((2, 8, 64)):
@@ -298,8 +317,8 @@ def _draw_settings(
             pygame.draw.rect(screen, option.tiles[value], preview, border_radius=4)
 
     label = _font(21, language, bold=True).render(text(language, "language"), True, theme.text)
-    screen.blit(label, (modal.left + 24, modal.top + 235))
-    for option_language, rect in language_buttons.items():
+    screen.blit(label, (modal.left + 24, modal.top + 195))
+    for option_language, rect in controls.languages.items():
         selected = option_language == language
         _draw_button(
             screen,
@@ -307,29 +326,45 @@ def _draw_settings(
             text(language, "english" if option_language == "en" else "chinese"),
             theme.accent if selected else theme.empty_cell,
             theme.light_text if selected else theme.text,
-            20,
+            18,
             option_language,
             theme.accent,
         )
 
-    best = _font(21, language, bold=True).render(
+    ai_label = _font(20, language, bold=True).render(
+        text(language, "ai_player"), True, theme.text
+    )
+    screen.blit(ai_label, (modal.left + 24, modal.top + 257))
+    speed_label = text(language, "ai_speed").format(speed=text(language, ai_speed))
+    _draw_button(
+        screen,
+        controls.ai_speed,
+        speed_label,
+        theme.empty_cell,
+        theme.text,
+        17,
+        language,
+        theme.board,
+    )
+
+    best = _font(19, language, bold=True).render(
         f"{text(language, 'best_score')}: {best_score}", True, theme.text
     )
-    screen.blit(best, (modal.left + 24, modal.top + 306))
+    screen.blit(best, (modal.left + 24, modal.top + 322))
     _draw_button(
-        screen, copy_save, text(language, "copy_save"), theme.empty_cell,
-        theme.text, 18, language, theme.board,
+        screen, controls.copy_save, text(language, "copy_save"), theme.empty_cell,
+        theme.text, 17, language, theme.board,
     )
     _draw_button(
-        screen, load_save, text(language, "load_save"), theme.empty_cell,
-        theme.text, 18, language, theme.board,
+        screen, controls.load_save, text(language, "load_save"), theme.empty_cell,
+        theme.text, 17, language, theme.board,
     )
     if notice:
-        rendered = _font(17, language).render(notice, True, theme.text)
-        screen.blit(rendered, (modal.left + 24, modal.top + 378))
+        rendered = _font(16, language).render(notice, True, theme.text)
+        screen.blit(rendered, (modal.left + 24, modal.top + 388))
     _draw_button(
-        screen, restart, text(language, "restart"), theme.accent,
-        theme.light_text, 23, language,
+        screen, controls.restart, text(language, "restart"), theme.accent,
+        theme.light_text, 22, language,
     )
 
 
@@ -347,6 +382,8 @@ def draw_game(
     score_popup: ScorePopup | None = None,
     current_time: int | None = None,
     show_game_over: bool = True,
+    ai_enabled: bool = False,
+    ai_speed: AiSpeed = "normal",
 ) -> None:
     """Render one complete game frame."""
 
@@ -354,9 +391,11 @@ def draw_game(
     layout = page_layout(screen.get_size())
     board_rect = layout["board"]
     settings_rect = layout["settings"]
+    ai_toggle_rect = layout["ai_toggle"]
     margin = layout["margin"]
     assert isinstance(board_rect, pygame.Rect)
     assert isinstance(settings_rect, pygame.Rect)
+    assert isinstance(ai_toggle_rect, pygame.Rect)
     assert isinstance(margin, int)
 
     screen.fill(theme.background)
@@ -365,6 +404,16 @@ def draw_game(
     _draw_button(
         screen, settings_rect, text(language, "settings"), theme.empty_cell,
         theme.text, 22, language, theme.board,
+    )
+    _draw_button(
+        screen,
+        ai_toggle_rect,
+        text(language, "pause_ai" if ai_enabled else "start_ai"),
+        theme.accent if ai_enabled else theme.empty_cell,
+        theme.light_text if ai_enabled else theme.text,
+        18,
+        language,
+        theme.accent,
     )
 
     score = _font(27, language, bold=True).render(
@@ -400,5 +449,11 @@ def draw_game(
             screen, motions, animation_progress, theme, board_rect, len(state.board)
         )
     if settings_open:
-        _draw_settings(screen, theme_name, language, best_score, settings_notice)
-
+        _draw_settings(
+            screen,
+            theme_name,
+            language,
+            best_score,
+            settings_notice,
+            ai_speed,
+        )
