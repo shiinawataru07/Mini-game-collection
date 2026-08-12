@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import cast
+from typing import Literal, cast
 
 import pygame
 
@@ -56,6 +56,8 @@ KEY_DIRECTIONS: dict[int, Direction] = {
     pygame.K_d: "right",
 }
 
+Navigation = Literal["menu", "quit"]
+
 
 def _score_popup(animation: MoveAnimation) -> ScorePopup | None:
     if not animation.gained_score:
@@ -66,10 +68,9 @@ def _score_popup(animation: MoveAnimation) -> ScorePopup | None:
     )
 
 
-def run() -> None:
+def run() -> Navigation:
     """Start the resizable 2048 game window."""
 
-    pygame.init()
     screen = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT), pygame.RESIZABLE)
     pygame.display.set_caption("Mini Game Collection - 2048")
     clock = pygame.time.Clock()
@@ -87,6 +88,7 @@ def run() -> None:
     animation: MoveAnimation | None = None
     queued_direction: Direction | None = None
     score_popup: ScorePopup | None = None
+    navigation: Navigation = "menu"
     running = True
 
     while running:
@@ -115,6 +117,7 @@ def run() -> None:
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
+                navigation = "quit"
                 running = False
                 continue
 
@@ -314,4 +317,4 @@ def run() -> None:
         clock.tick(FPS)
 
     save_best_score(best_score)
-    pygame.quit()
+    return navigation
