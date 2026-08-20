@@ -6,6 +6,7 @@ from typing import cast
 
 import pygame
 
+from games.common.app_settings import handle_global_shortcut, load_app_settings
 from games.common.types import Navigation
 from games.common.window import open_resizable_window, resize_resizable_window
 
@@ -53,11 +54,14 @@ DIFFICULTY_KEYS: dict[int, Difficulty] = {
 def run() -> Navigation:
     """Run Minesweeper until the player returns to the collection or quits."""
 
+    app_settings = load_app_settings()
     screen = open_resizable_window(
-        (WINDOW_WIDTH, WINDOW_HEIGHT), "Mini Game Collection - Minesweeper"
+        (WINDOW_WIDTH, WINDOW_HEIGHT),
+        "Mini Game Collection - Minesweeper",
+        app_settings.fullscreen,
     )
     clock = pygame.time.Clock()
-    sounds = GameSounds()
+    sounds = GameSounds(app_settings)
     player_data = load_player_data()
     theme_name = player_data.theme if player_data.theme in THEMES else DEFAULT_THEME
     language = cast(
@@ -188,7 +192,15 @@ def run() -> Navigation:
                 )
                 continue
             if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_ESCAPE:
+                handled = handle_global_shortcut(
+                    event.key,
+                    app_settings,
+                    (MIN_WINDOW_WIDTH, MIN_WINDOW_HEIGHT),
+                )
+                if handled is not None:
+                    app_settings, screen = handled
+                    sounds.update_settings(app_settings)
+                elif event.key == pygame.K_ESCAPE:
                     if settings_open:
                         settings_open = False
                     else:

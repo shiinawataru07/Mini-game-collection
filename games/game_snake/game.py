@@ -7,6 +7,7 @@ from typing import cast
 
 import pygame
 
+from games.common.app_settings import handle_global_shortcut, load_app_settings
 from games.common.types import Navigation
 from games.common.window import open_resizable_window, resize_resizable_window
 
@@ -37,6 +38,7 @@ from .logic import (
     toggle_pause,
 )
 from .persistence import load_player_data, save_player_data
+from .sound import GameSounds
 from .ui import draw_game, mode_controls, settings_controls
 
 KEY_DIRECTIONS: dict[int, Direction] = {
@@ -54,8 +56,14 @@ KEY_DIRECTIONS: dict[int, Direction] = {
 def run() -> Navigation:
     """Run Snake until the player returns to the collection menu or quits."""
 
-    screen = open_resizable_window((WINDOW_WIDTH, WINDOW_HEIGHT), "Mini Game Collection - Snake")
+    app_settings = load_app_settings()
+    screen = open_resizable_window(
+        (WINDOW_WIDTH, WINDOW_HEIGHT),
+        "Mini Game Collection - Snake",
+        app_settings.fullscreen,
+    )
     clock = pygame.time.Clock()
+    sounds = GameSounds(app_settings)
 
     player_data = load_player_data()
     best_score = player_data.best_score
@@ -101,7 +109,15 @@ def run() -> Navigation:
                 continue
 
             if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_ESCAPE:
+                handled = handle_global_shortcut(
+                    event.key,
+                    app_settings,
+                    (MIN_WINDOW_WIDTH, MIN_WINDOW_HEIGHT),
+                )
+                if handled is not None:
+                    app_settings, screen = handled
+                    sounds.update_settings(app_settings)
+                elif event.key == pygame.K_ESCAPE:
                     if settings_open:
                         settings_open = False
                     else:
@@ -210,6 +226,7 @@ def run() -> Navigation:
                     state = start_or_turn(state, pending_directions.popleft())
                 result = advance(state)
                 state = result.state
+                sounds.play_step(result)
                 if state.score > best_score:
                     best_score = state.score
                     save_player_data(best_score, theme_name, language, speed=speed)

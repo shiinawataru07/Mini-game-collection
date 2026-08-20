@@ -7,6 +7,7 @@ from typing import cast
 
 import pygame
 
+from games.common.app_settings import handle_global_shortcut, load_app_settings
 from games.common.types import Navigation
 from games.common.window import open_resizable_window, resize_resizable_window
 
@@ -37,6 +38,7 @@ from .logic import (
     toggle_pause,
 )
 from .persistence import PlayerData, load_player_data, save_player_data
+from .sound import GameSounds
 from .ui import draw_game, settings_controls
 
 HORIZONTAL_KEYS: dict[int, HorizontalDirection] = {
@@ -51,8 +53,14 @@ SOFT_DROP_KEYS = (pygame.K_DOWN, pygame.K_s)
 def run() -> Navigation:
     """Run Tetris until the player returns to the collection or quits."""
 
-    screen = open_resizable_window((WINDOW_WIDTH, WINDOW_HEIGHT), "Mini Game Collection - Tetris")
+    app_settings = load_app_settings()
+    screen = open_resizable_window(
+        (WINDOW_WIDTH, WINDOW_HEIGHT),
+        "Mini Game Collection - Tetris",
+        app_settings.fullscreen,
+    )
     clock = pygame.time.Clock()
+    sounds = GameSounds(app_settings)
     rng = random.Random()
     player_data = load_player_data()
     best_score = player_data.best_score
@@ -83,6 +91,7 @@ def run() -> Navigation:
     def apply_transition(transition: Transition, now: int) -> None:
         nonlocal animation, best_lines, best_score, state
         state = transition.state
+        sounds.play_transition(transition)
         if transition.cleared_rows:
             animation = animation_from_transition(transition, now)
         changed_record = False
@@ -146,7 +155,15 @@ def run() -> Navigation:
                     soft_drop_elapsed = 0.0
                 continue
             if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_ESCAPE:
+                handled = handle_global_shortcut(
+                    event.key,
+                    app_settings,
+                    (MIN_WINDOW_WIDTH, MIN_WINDOW_HEIGHT),
+                )
+                if handled is not None:
+                    app_settings, screen = handled
+                    sounds.update_settings(app_settings)
+                elif event.key == pygame.K_ESCAPE:
                     if settings_open:
                         set_settings(False)
                     else:

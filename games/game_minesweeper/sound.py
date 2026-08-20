@@ -4,24 +4,11 @@ from __future__ import annotations
 
 import math
 import random
-from array import array
 
 import pygame
 
-SAMPLE_RATE = 44_100
-
-
-def _sound_from_samples(samples: list[float]) -> pygame.mixer.Sound:
-    mixer_init = pygame.mixer.get_init()
-    if mixer_init is None:
-        raise pygame.error("Mixer is unavailable")
-    _, _, channels = mixer_init
-    pcm = array("h")
-    for sample in samples:
-        value = max(-1.0, min(1.0, sample))
-        encoded = round(value * 32767)
-        pcm.extend([encoded] * channels)
-    return pygame.mixer.Sound(buffer=pcm.tobytes())
+from games.common.app_settings import AppSettings, load_app_settings
+from games.common.audio import SAMPLE_RATE, sound_from_samples
 
 
 def _victory_samples() -> list[float]:
@@ -52,24 +39,32 @@ def _explosion_samples() -> list[float]:
 class GameSounds:
     """Load outcome sounds once and degrade silently when audio is unavailable."""
 
-    def __init__(self) -> None:
+    def __init__(self, settings: AppSettings | None = None) -> None:
+        self.settings = settings or load_app_settings()
         self.victory: pygame.mixer.Sound | None = None
         self.explosion: pygame.mixer.Sound | None = None
         try:
             if pygame.mixer.get_init() is None:
                 pygame.mixer.init(frequency=SAMPLE_RATE, size=-16, channels=2, buffer=512)
-            self.victory = _sound_from_samples(_victory_samples())
-            self.explosion = _sound_from_samples(_explosion_samples())
+            self.victory = sound_from_samples(_victory_samples())
+            self.explosion = sound_from_samples(_explosion_samples())
         except (pygame.error, ValueError):
             pass
 
+    def update_settings(self, settings: AppSettings) -> None:
+        self.settings = settings
+
+    def _play(self, sound: pygame.mixer.Sound | None) -> None:
+        if sound is None or self.settings.effective_volume <= 0:
+            return
+        sound.set_volume(self.settings.effective_volume)
+        sound.play()
+
     def play_victory(self) -> None:
-        if self.victory is not None:
-            self.victory.play()
+        self._play(self.victory)
 
     def play_explosion(self) -> None:
-        if self.explosion is not None:
-            self.explosion.play()
+        self._play(self.explosion)
 
 
 def play_outcome_transition(

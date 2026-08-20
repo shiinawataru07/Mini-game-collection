@@ -1,7 +1,21 @@
 # 俄罗斯方块
 
+> 全局快捷键：`M` 静音，`-` / `+` 调节音量，`F11` 切换全屏。旋转、暂存、锁定、消行和游戏结束均有音效反馈。
+
+[返回小游戏合集](../../README.md)
+
 经典的下落方块消行游戏。本实现使用 10×20 可见棋盘和两行隐藏出生区，并遵循 SRS
 旋转与踢墙规则。
+
+## 游戏截图
+
+| 游戏进行中 | 设置界面 |
+| --- | --- |
+| ![俄罗斯方块游戏进行中，展示 Hold、Next 和 Ghost Piece](../../docs/images/tetris/gameplay.png) | ![俄罗斯方块主题与语言设置界面](../../docs/images/tetris/settings.png) |
+
+### 游戏结束
+
+![俄罗斯方块游戏结束界面](../../docs/images/tetris/game-over.png)
 
 ## 操作
 
@@ -27,4 +41,3 @@
 
 核心规则位于 `logic.py` 和 `pieces.py`，不依赖 Pygame。窗口、输入与绘制分别由
 `game.py`、`input.py` 和 `ui.py` 负责。
-

@@ -1,1 +1,1 @@
-"""Small shared UI building blocks used by multiple games."""
+"""Shared settings, audio, persistence, types, and UI helpers."""

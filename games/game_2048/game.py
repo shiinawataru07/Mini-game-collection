@@ -6,6 +6,7 @@ from typing import cast
 
 import pygame
 
+from games.common.app_settings import handle_global_shortcut, load_app_settings
 from games.common.types import Navigation
 from games.common.window import open_resizable_window, resize_resizable_window
 
@@ -40,6 +41,7 @@ from .persistence import (
     parse_save_json,
     save_best_score,
 )
+from .sound import GameSounds
 from .ui import (
     copy_to_clipboard,
     draw_game,
@@ -72,8 +74,14 @@ def _score_popup(animation: MoveAnimation) -> ScorePopup | None:
 def run() -> Navigation:
     """Start the resizable 2048 game window."""
 
-    screen = open_resizable_window((WINDOW_WIDTH, WINDOW_HEIGHT), "Mini Game Collection - 2048")
+    app_settings = load_app_settings()
+    screen = open_resizable_window(
+        (WINDOW_WIDTH, WINDOW_HEIGHT),
+        "Mini Game Collection - 2048",
+        app_settings.fullscreen,
+    )
     clock = pygame.time.Clock()
+    sounds = GameSounds(app_settings)
 
     state = new_game()
     board_size = len(state.board)
@@ -91,12 +99,22 @@ def run() -> Navigation:
     navigation: Navigation = "menu"
     running = True
 
+    def start_animation(direction: Direction, now: int) -> None:
+        nonlocal animation, score_popup
+        animation = build_move_animation(state, direction, now)
+        if animation:
+            score_popup = _score_popup(animation)
+            sounds.play_move(animation)
+
     while running:
         now = pygame.time.get_ticks()
         if score_popup and now - score_popup.started_at >= SCORE_POPUP_MS:
             score_popup = None
 
         if animation and now - animation.started_at >= TOTAL_MOVE_ANIMATION_MS:
+            reached_game_over = (
+                not animation.start_state.game_over and animation.end_state.game_over
+            )
             state = animation.end_state
             if state.score > best_score:
                 best_score = state.score
@@ -105,13 +123,13 @@ def run() -> Navigation:
 
             if state.game_over:
                 ai_enabled = False
+                if reached_game_over:
+                    sounds.play_game_over()
 
             if queued_direction is not None:
                 direction = queued_direction
                 queued_direction = None
-                animation = build_move_animation(state, direction, now)
-                if animation:
-                    score_popup = _score_popup(animation)
+                start_animation(direction, now)
             elif ai_enabled:
                 next_ai_move_at = now + AI_MOVE_DELAYS[ai_speed]
 
@@ -129,7 +147,15 @@ def run() -> Navigation:
                 continue
 
             if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_ESCAPE:
+                handled = handle_global_shortcut(
+                    event.key,
+                    app_settings,
+                    (MIN_WINDOW_WIDTH, MIN_WINDOW_HEIGHT),
+                )
+                if handled is not None:
+                    app_settings, screen = handled
+                    sounds.update_settings(app_settings)
+                elif event.key == pygame.K_ESCAPE:
                     if settings_open:
                         settings_open = False
                         settings_notice = ""
@@ -149,9 +175,7 @@ def run() -> Navigation:
                     if animation:
                         queued_direction = direction
                     else:
-                        animation = build_move_animation(state, direction, now)
-                        if animation:
-                            score_popup = _score_popup(animation)
+                        start_animation(direction, now)
                 continue
 
             if event.type != pygame.MOUSEBUTTONDOWN or event.button != 1:
@@ -256,10 +280,8 @@ def run() -> Navigation:
             if direction is None:
                 ai_enabled = False
             else:
-                animation = build_move_animation(state, direction, now)
-                if animation:
-                    score_popup = _score_popup(animation)
-                else:
+                start_animation(direction, now)
+                if animation is None:
                     ai_enabled = False
 
         if animation:

@@ -3,6 +3,7 @@
 import unittest
 from dataclasses import replace
 
+import pygame
 from games.menu import menu_layout
 from games.registry import GAMES
 
@@ -14,6 +15,7 @@ class MenuLayoutTests(unittest.TestCase):
                 layout = menu_layout((width, height))
                 cards = list(layout.cards.values())
                 self.assertEqual(set(layout.cards), {game.id for game in GAMES})
+                self.assertTrue(pygame.Rect(0, 0, width, height).contains(layout.settings))
                 for index, card in enumerate(cards):
                     self.assertFalse(any(card.colliderect(other) for other in cards[index + 1 :]))
                     self.assertGreaterEqual(card.left, 0)

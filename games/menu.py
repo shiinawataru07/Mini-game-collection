@@ -7,8 +7,18 @@ from dataclasses import dataclass
 
 import pygame
 
+from games.common.app_settings import (
+    GlobalAction,
+    apply_global_action,
+    audio_status,
+    handle_global_shortcut,
+    load_app_settings,
+    save_app_settings,
+)
+from games.common.app_settings_ui import app_settings_controls, draw_app_settings
+from games.common.controls import draw_button
 from games.common.fonts import get_font
-from games.common.window import open_resizable_window, resize_resizable_window
+from games.common.window import open_resizable_window, resize_resizable_window, set_fullscreen
 from games.registry import GAMES, GameDescriptor, game_by_shortcut
 
 WINDOW_SIZE = (760, 600)
@@ -23,6 +33,7 @@ BORDER = (215, 222, 213)
 @dataclass(frozen=True)
 class MenuLayout:
     cards: dict[str, pygame.Rect]
+    settings: pygame.Rect
 
 
 def menu_layout(
@@ -57,7 +68,8 @@ def menu_layout(
         )
         for index, game in enumerate(games)
     }
-    return MenuLayout(cards)
+    settings = pygame.Rect(width - margin - 106, 22, 106, 36)
+    return MenuLayout(cards, settings)
 
 
 def _draw_card(
@@ -99,8 +111,21 @@ def _shortcut_from_key(key: int) -> int | None:
 
 
 def _choose_game() -> GameDescriptor | None:
-    screen = open_resizable_window(WINDOW_SIZE, "Mini Game Collection")
+    app_settings = load_app_settings()
+    screen = open_resizable_window(
+        WINDOW_SIZE,
+        "Mini Game Collection",
+        app_settings.fullscreen,
+    )
     clock = pygame.time.Clock()
+    settings_open = False
+
+    def apply_setting_action(action: GlobalAction) -> None:
+        nonlocal app_settings, screen
+        app_settings = apply_global_action(app_settings, action)
+        save_app_settings(app_settings)
+        if action == "fullscreen":
+            screen = set_fullscreen(app_settings.fullscreen, MIN_WINDOW_SIZE)
 
     while True:
         layout = menu_layout(screen.get_size())
@@ -111,17 +136,34 @@ def _choose_game() -> GameDescriptor | None:
         subtitle = get_font(17, "zh").render("选择一个游戏开始 · Choose a game", True, MUTED)
         screen.blit(title, title.get_rect(center=(screen.get_width() // 2, 58)))
         screen.blit(subtitle, subtitle.get_rect(center=(screen.get_width() // 2, 100)))
+        draw_button(
+            screen,
+            layout.settings,
+            "全局设置",
+            PANEL,
+            TEXT,
+            15,
+            "zh",
+            border_color=BORDER,
+            border_radius=9,
+        )
 
         for game in GAMES:
             card = layout.cards[game.id]
             _draw_card(screen, card, game, card.collidepoint(mouse))
 
         shortcuts = " / ".join(str(game.shortcut) for game in GAMES)
-        hint = get_font(14, "zh").render(f"按 {shortcuts} 快速选择  ·  Esc 退出", True, MUTED)
+        hint = get_font(13, "zh").render(
+            f"按 {shortcuts} 快速选择  ·  {audio_status(app_settings)}  ·  M 静音  ·  F11 全屏",
+            True,
+            MUTED,
+        )
         screen.blit(
             hint,
             hint.get_rect(center=(screen.get_width() // 2, screen.get_height() - 27)),
         )
+        if settings_open:
+            draw_app_settings(screen, app_settings)
         pygame.display.flip()
 
         for event in pygame.event.get():
@@ -130,15 +172,39 @@ def _choose_game() -> GameDescriptor | None:
             if event.type == pygame.VIDEORESIZE:
                 screen = resize_resizable_window((event.w, event.h), MIN_WINDOW_SIZE)
             elif event.type == pygame.KEYDOWN:
-                if event.key in (pygame.K_ESCAPE, pygame.K_q):
+                handled = handle_global_shortcut(event.key, app_settings, MIN_WINDOW_SIZE)
+                if handled is not None:
+                    app_settings, screen = handled
+                    continue
+                if event.key == pygame.K_F10:
+                    settings_open = not settings_open
+                elif event.key == pygame.K_ESCAPE and settings_open:
+                    settings_open = False
+                elif event.key in (pygame.K_ESCAPE, pygame.K_q):
                     return None
-                shortcut = _shortcut_from_key(event.key)
-                if shortcut is not None:
-                    return game_by_shortcut(shortcut)
+                elif not settings_open:
+                    shortcut = _shortcut_from_key(event.key)
+                    if shortcut is not None:
+                        return game_by_shortcut(shortcut)
             elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-                for game in GAMES:
-                    if layout.cards[game.id].collidepoint(event.pos):
-                        return game
+                if settings_open:
+                    controls = app_settings_controls(screen.get_size())
+                    if controls.close.collidepoint(event.pos):
+                        settings_open = False
+                    elif controls.volume_down.collidepoint(event.pos):
+                        apply_setting_action("volume_down")
+                    elif controls.volume_up.collidepoint(event.pos):
+                        apply_setting_action("volume_up")
+                    elif controls.mute.collidepoint(event.pos):
+                        apply_setting_action("mute")
+                    elif controls.fullscreen.collidepoint(event.pos):
+                        apply_setting_action("fullscreen")
+                elif layout.settings.collidepoint(event.pos):
+                    settings_open = True
+                else:
+                    for game in GAMES:
+                        if layout.cards[game.id].collidepoint(event.pos):
+                            return game
         clock.tick(60)
 
 
