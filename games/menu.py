@@ -53,21 +53,23 @@ def menu_layout(
     content_top = 132
     content_bottom = height - 54
     available_height = content_bottom - content_top - gap * (rows - 1)
-    card_height = max(120, min(330, available_height // rows))
-    grid_width = card_width * columns + gap * (columns - 1)
+    card_height = max(80, min(330, available_height // rows))
     grid_height = card_height * rows + gap * (rows - 1)
-    left = (width - grid_width) // 2
     top = content_top + max(0, (content_bottom - content_top - grid_height) // 2)
 
-    cards = {
-        game.id: pygame.Rect(
-            left + (index % columns) * (card_width + gap),
-            top + (index // columns) * (card_height + gap),
+    cards: dict[str, pygame.Rect] = {}
+    for index, game in enumerate(games):
+        row = index // columns
+        column = index % columns
+        games_in_row = min(columns, count - row * columns)
+        row_width = card_width * games_in_row + gap * (games_in_row - 1)
+        row_left = (width - row_width) // 2
+        cards[game.id] = pygame.Rect(
+            row_left + column * (card_width + gap),
+            top + row * (card_height + gap),
             card_width,
             card_height,
         )
-        for index, game in enumerate(games)
-    }
     settings = pygame.Rect(width - margin - 106, 22, 106, 36)
     return MenuLayout(cards, settings)
 
@@ -88,14 +90,27 @@ def _draw_card(
         width=3 if hovered else 1,
         border_radius=18,
     )
-    game.preview(screen, rect)
-    title_surface = get_font(31, "zh", bold=True).render(game.title, True, TEXT)
-    subtitle_surface = get_font(16, "zh").render(game.subtitle, True, MUTED)
+    compact_without_preview = rect.height < 120
+    if not compact_without_preview:
+        game.preview(screen, rect)
+    title_size = max(22, min(31, rect.height // 6))
+    subtitle_size = max(13, min(16, rect.height // 12))
+    if compact_without_preview:
+        title_y = rect.centery - 13
+        subtitle_y = rect.centery + 18
+    else:
+        title_y = rect.bottom - max(35, min(75, round(rect.height * 0.28)))
+        subtitle_y = rect.bottom - max(11, min(40, round(rect.height * 0.15)))
+    title_surface = get_font(title_size, "zh", bold=True).render(game.title, True, TEXT)
+    subtitle_surface = get_font(subtitle_size, "zh").render(game.subtitle, True, MUTED)
     shortcut_surface = get_font(14, bold=True).render(str(game.shortcut), True, game.accent)
-    screen.blit(title_surface, title_surface.get_rect(center=(rect.centerx, rect.bottom - 75)))
+    screen.blit(
+        title_surface,
+        title_surface.get_rect(center=(rect.centerx, title_y)),
+    )
     screen.blit(
         subtitle_surface,
-        subtitle_surface.get_rect(center=(rect.centerx, rect.bottom - 40)),
+        subtitle_surface.get_rect(center=(rect.centerx, subtitle_y)),
     )
     screen.blit(shortcut_surface, (rect.left + 14, rect.top + 12))
 

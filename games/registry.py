@@ -11,6 +11,7 @@ import pygame
 
 from games.common.types import Navigation
 from games.game_2048.preview import draw_preview as draw_2048_preview
+from games.game_gomoku.preview import draw_preview as draw_gomoku_preview
 from games.game_minesweeper.preview import draw_preview as draw_minesweeper_preview
 from games.game_snake.preview import draw_preview as draw_snake_preview
 from games.game_tetris.preview import draw_preview as draw_tetris_preview
@@ -75,6 +76,15 @@ GAMES: tuple[GameDescriptor, ...] = (
         accent=(139, 116, 255),
         runner="games.game_tetris.game:run",
         preview=draw_tetris_preview,
+    ),
+    GameDescriptor(
+        id="gomoku",
+        title="五子棋",
+        subtitle="连珠成五 · 对弈",
+        shortcut=5,
+        accent=(150, 96, 52),
+        runner="games.game_gomoku.game:run",
+        preview=draw_gomoku_preview,
     ),
 )
 

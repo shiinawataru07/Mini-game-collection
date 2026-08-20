@@ -4,6 +4,17 @@
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-08-20
+
+### 五子棋
+
+- 增加 15×15 古朴木质棋盘和黑白棋子
+- 完成本地双人轮流落子、五连胜负判断、和棋、悔棋与重开
+- 预留人机对战模式入口，AI 计划在后续版本实现
+- 接入合集菜单、全局音量、静音、全屏设置和程序合成音效
+- 核心规则与 Pygame 界面分层，并补充自动化测试
+- 为本地双人对局和模式选择界面补充游戏截图
+
 ### 俄罗斯方块
 
 - 10×20 可见棋盘、两行隐藏出生区和响应式界面
@@ -57,4 +68,6 @@
 - Python 3.10–3.13 持续集成
 - Windows x64 可执行版本自动构建与 SHA-256 校验
 
+[Unreleased]: https://github.com/shiinawataru07/Mini-game-collection/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/shiinawataru07/Mini-game-collection/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/shiinawataru07/Mini-game-collection/releases/tag/v1.0.0
