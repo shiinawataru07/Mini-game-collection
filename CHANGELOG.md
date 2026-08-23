@@ -4,6 +4,32 @@
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-08-23
+
+### 五子棋 AI
+
+- 正式开放玩家执黑的人机对战模式
+- 增加入门、标准和专家三档搜索强度
+- 增加一步胜、一步防和邻域候选点生成
+- 增加活四、冲四、双四、四三、双三等精确复合棋型分类
+- 增加可证明连续冲四胜利的 VCF 求解器
+- 主搜索升级为迭代加深 PVS，并使用 Zobrist 哈希和容量受控置换表
+- AI 在后台线程思考，悔棋、重开、切换模式和退出时会取消或丢弃过期结果
+- 增加确定性性能基准，以及棋型、VCF、哈希和搜索回归测试
+
+### 界面与文档
+
+- 人机模式界面增加三档难度选择和 AI 思考状态
+- 对局标题显示当前 AI 强度，AI 思考期间禁用落子预览
+- 更新五子棋本地对局、模式选择和人机实战截图
+- 增加五子棋 AI 总体设计和 M3 专家级 CPU 引擎设计文档
+
+### 工程与发布
+
+- 项目版本更新至 1.2.0
+- 自动化测试增加至 200 项
+- Windows 发布构建继续提供 SHA-256 校验文件
+
 ## [1.1.0] - 2026-08-20
 
 ### 五子棋
@@ -68,6 +94,7 @@
 - Python 3.10–3.13 持续集成
 - Windows x64 可执行版本自动构建与 SHA-256 校验
 
-[Unreleased]: https://github.com/shiinawataru07/Mini-game-collection/compare/v1.1.0...HEAD
+[Unreleased]: https://github.com/shiinawataru07/Mini-game-collection/compare/v1.2.0...HEAD
+[1.2.0]: https://github.com/shiinawataru07/Mini-game-collection/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/shiinawataru07/Mini-game-collection/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/shiinawataru07/Mini-game-collection/releases/tag/v1.0.0

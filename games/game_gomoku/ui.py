@@ -10,6 +10,7 @@ import pygame
 from games.common.controls import draw_button, draw_overlay, draw_panel
 from games.common.fonts import get_font
 
+from .ai import Difficulty
 from .config import (
     ACCENT,
     BACKGROUND,
@@ -45,6 +46,9 @@ class ModeControls:
     close: pygame.Rect
     local: pygame.Rect
     ai: pygame.Rect
+    easy: pygame.Rect
+    normal: pygame.Rect
+    expert: pygame.Rect
 
 
 def page_layout(window_size: tuple[int, int]) -> Layout:
@@ -69,14 +73,26 @@ def page_layout(window_size: tuple[int, int]) -> Layout:
 
 def mode_controls(window_size: tuple[int, int]) -> ModeControls:
     width, height = window_size
-    modal = pygame.Rect(0, 0, min(620, width - 36), min(350, height - 36))
+    modal = pygame.Rect(0, 0, min(620, width - 36), min(380, height - 36))
     modal.center = (width // 2, height // 2)
     close = pygame.Rect(modal.right - 88, modal.top + 18, 66, 34)
     gap = 18
     card_width = (modal.width - 72 - gap) // 2
-    local = pygame.Rect(modal.left + 36, modal.top + 108, card_width, 170)
+    local = pygame.Rect(modal.left + 36, modal.top + 100, card_width, 210)
     ai = pygame.Rect(local.right + gap, local.top, card_width, local.height)
-    return ModeControls(modal, close, local, ai)
+    difficulty_gap = 5
+    difficulty_margin = 10
+    difficulty_width = (ai.width - difficulty_margin * 2 - difficulty_gap * 2) // 3
+    difficulty_top = ai.bottom - 50
+    easy = pygame.Rect(
+        ai.left + difficulty_margin,
+        difficulty_top,
+        difficulty_width,
+        34,
+    )
+    normal = pygame.Rect(easy.right + difficulty_gap, easy.top, difficulty_width, easy.height)
+    expert = pygame.Rect(normal.right + difficulty_gap, easy.top, difficulty_width, easy.height)
+    return ModeControls(modal, close, local, ai, easy, normal, expert)
 
 
 def _intersection(layout: Layout, position: Position) -> tuple[int, int]:
@@ -161,7 +177,12 @@ def _draw_stone(
         pygame.draw.circle(screen, ACCENT, center, max(2, radius // 5), width=2)
 
 
-def _draw_board(screen: pygame.Surface, state: GameState, layout: Layout) -> None:
+def _draw_board(
+    screen: pygame.Surface,
+    state: GameState,
+    layout: Layout,
+    ai_thinking: bool = False,
+) -> None:
     _draw_wood(screen, layout)
     if state.winning_line:
         start = _intersection(layout, state.winning_line[0])
@@ -183,7 +204,7 @@ def _draw_board(screen: pygame.Surface, state: GameState, layout: Layout) -> Non
                     position == last,
                 )
 
-    if state.status == "playing" and pygame.display.get_init():
+    if state.status == "playing" and not ai_thinking and pygame.display.get_init():
         hover = position_at_point(layout, pygame.mouse.get_pos())
         if hover is not None and state.board[hover[0]][hover[1]] == 0:
             ghost = pygame.Surface((radius * 2 + 4, radius * 2 + 4), pygame.SRCALPHA)
@@ -193,13 +214,15 @@ def _draw_board(screen: pygame.Surface, state: GameState, layout: Layout) -> Non
             screen.blit(ghost, (center[0] - radius - 2, center[1] - radius - 2))
 
 
-def _status_text(state: GameState) -> str:
+def _status_text(state: GameState, ai_thinking: bool = False) -> str:
     if state.status == "black_won":
         return "黑方胜利"
     if state.status == "white_won":
         return "白方胜利"
     if state.status == "draw":
         return "和棋"
+    if ai_thinking:
+        return "AI 思考中…"
     return "黑方落子" if state.current_player == 1 else "白方落子"
 
 
@@ -207,6 +230,7 @@ def _draw_mode_selection(
     screen: pygame.Surface,
     notice: str,
     closable: bool,
+    ai_difficulty: Difficulty,
 ) -> None:
     controls = mode_controls(screen.get_size())
     draw_overlay(screen, (34, 25, 18), 180)
@@ -236,7 +260,7 @@ def _draw_mode_selection(
     pygame.draw.rect(screen, WOOD_DARK, controls.local, width=2, border_radius=14)
     local_title = get_font(24, "zh", bold=True).render("本地双人", True, TEXT)
     local_subtitle = get_font(15, "zh").render("黑白双方轮流落子", True, MUTED_TEXT)
-    local_key = get_font(14, bold=True).render("1", True, ACCENT)
+    local_key = get_font(14, "zh", bold=True).render("快捷键 1", True, ACCENT)
     screen.blit(
         local_title, local_title.get_rect(center=(controls.local.centerx, controls.local.top + 55))
     )
@@ -248,15 +272,32 @@ def _draw_mode_selection(
         local_key, local_key.get_rect(center=(controls.local.centerx, controls.local.bottom - 28))
     )
 
-    pygame.draw.rect(screen, (213, 201, 176), controls.ai, border_radius=14)
-    pygame.draw.rect(screen, (170, 151, 119), controls.ai, width=1, border_radius=14)
-    ai_title = get_font(24, "zh", bold=True).render("人机对战", True, MUTED_TEXT)
-    ai_subtitle = get_font(15, "zh").render("AI 开发中 · 后续开放", True, MUTED_TEXT)
+    pygame.draw.rect(screen, WOOD_LIGHT, controls.ai, border_radius=14)
+    pygame.draw.rect(screen, WOOD_DARK, controls.ai, width=2, border_radius=14)
+    ai_title = get_font(24, "zh", bold=True).render("人机对战", True, TEXT)
+    ai_subtitle = get_font(15, "zh").render("选择搜索强度", True, MUTED_TEXT)
     screen.blit(ai_title, ai_title.get_rect(center=(controls.ai.centerx, controls.ai.top + 55)))
     screen.blit(
         ai_subtitle,
         ai_subtitle.get_rect(center=(controls.ai.centerx, controls.ai.top + 96)),
     )
+    for difficulty, rect, label in (
+        ("easy", controls.easy, "入门 2"),
+        ("normal", controls.normal, "标准 3"),
+        ("expert", controls.expert, "专家 4"),
+    ):
+        selected = difficulty == ai_difficulty
+        draw_button(
+            screen,
+            rect,
+            label,
+            ACCENT if selected else PANEL,
+            PANEL if selected else TEXT,
+            13,
+            "zh",
+            border_color=WOOD_DARK,
+            border_radius=7,
+        )
     if notice:
         rendered = get_font(14, "zh").render(notice, True, ACCENT)
         screen.blit(
@@ -270,6 +311,8 @@ def draw_game(
     mode_selecting: bool = False,
     mode_notice: str = "",
     mode_closable: bool = False,
+    ai_thinking: bool = False,
+    ai_difficulty: Difficulty = "normal",
 ) -> Layout:
     layout = page_layout(screen.get_size())
     screen.fill(BACKGROUND)
@@ -290,8 +333,12 @@ def draw_game(
             border_color=WOOD_DARK,
             border_radius=9,
         )
-    status = get_font(21, "zh", bold=True).render(_status_text(state), True, PANEL)
-    move_count = get_font(14, "zh").render(f"第 {len(state.moves) + 1} 手", True, PANEL_DARK)
+    status = get_font(21, "zh", bold=True).render(_status_text(state, ai_thinking), True, PANEL)
+    difficulty_label = {"easy": "入门", "normal": "标准", "expert": "专家"}[ai_difficulty]
+    move_label = f"第 {len(state.moves) + 1} 手"
+    if state.mode == "ai":
+        move_label += f" · AI {difficulty_label}"
+    move_count = get_font(14, "zh").render(move_label, True, PANEL_DARK)
     screen.blit(status, status.get_rect(center=(screen.get_width() // 2, 66)))
     if state.status == "playing":
         screen.blit(
@@ -301,7 +348,7 @@ def draw_game(
             ),
         )
 
-    _draw_board(screen, state, layout)
+    _draw_board(screen, state, layout, ai_thinking)
     hint = get_font(13, "zh").render(
         "点击交叉点落子 · U 悔棋 · R 重开 · M 静音 · F11 全屏",
         True,
@@ -320,5 +367,5 @@ def draw_game(
         screen.blit(subtitle, subtitle.get_rect(center=(panel.centerx, panel.centery + 25)))
 
     if mode_selecting:
-        _draw_mode_selection(screen, mode_notice, mode_closable)
+        _draw_mode_selection(screen, mode_notice, mode_closable, ai_difficulty)
     return layout

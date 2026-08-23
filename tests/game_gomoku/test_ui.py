@@ -31,9 +31,19 @@ class GomokuUiTests(unittest.TestCase):
     def test_mode_controls_are_contained_in_modal(self):
         for window_size in ((620, 600), (760, 820)):
             controls = mode_controls(window_size)
-            for rect in (controls.close, controls.local, controls.ai):
+            for rect in (
+                controls.close,
+                controls.local,
+                controls.ai,
+                controls.easy,
+                controls.normal,
+                controls.expert,
+            ):
                 self.assertTrue(controls.modal.contains(rect))
             self.assertFalse(controls.local.colliderect(controls.ai))
+            self.assertTrue(controls.ai.contains(controls.easy))
+            self.assertTrue(controls.ai.contains(controls.normal))
+            self.assertTrue(controls.ai.contains(controls.expert))
 
     def test_click_maps_to_intersection_and_rejects_board_margin(self):
         layout = page_layout((760, 820))

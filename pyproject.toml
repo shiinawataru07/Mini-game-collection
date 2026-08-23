@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "mini-game-collection"
-version = "1.1.0"
+version = "1.2.0"
 description = "A tested collection of classic mini-games built with Python and Pygame."
 readme = "README.md"
 requires-python = ">=3.10"

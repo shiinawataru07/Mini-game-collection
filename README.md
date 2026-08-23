@@ -2,7 +2,7 @@
 
 一个使用 **Python** 和 **Pygame** 开发的经典小游戏合集。
 
-当前稳定版本：**v1.1.0**。可以从 [GitHub Releases](https://github.com/shiinawataru07/Mini-game-collection/releases) 下载免安装的 Windows x64 压缩包，解压后运行 `MiniGameCollection.exe`。
+当前稳定版本：**v1.2.0**。可以从 [GitHub Releases](https://github.com/shiinawataru07/Mini-game-collection/releases) 下载免安装的 Windows x64 压缩包，解压后运行 `MiniGameCollection.exe`。
 
 项目用于练习游戏规则设计、图形界面开发和自动化测试。每个游戏拥有独立的代码目录和说明文档，核心规则尽量与 Pygame 界面分离，便于测试、维护和继续扩展。
 
@@ -14,15 +14,15 @@
 | 贪吃蛇 | 已完成，可持续优化 | 控制不断成长的蛇寻找食物并避开危险。支持三种模式、限时奖励食物和暂停设置。 | [查看玩法与功能](games/game_snake/README.md) |
 | 扫雷 | 已完成，可持续优化 | 翻开安全格并标记地雷。支持纯逻辑棋盘、求解器提示、三种经典难度、自定义棋盘和最佳时间记录。 | [查看玩法与功能](games/game_minesweeper/README.md) |
 | 俄罗斯方块 | 已完成，可持续优化 | 使用 SRS 旋转、7-bag、Hold 和 Ghost Piece 堆叠消行，随着等级提升挑战更快速度。 | [查看玩法与功能](games/game_tetris/README.md) |
-| 五子棋 | 最小版本已完成 | 在古朴的 15×15 木棋盘上进行本地黑白对弈，支持胜负判断、悔棋和重开。人机模式入口已预留。 | [查看玩法与功能](games/game_gomoku/README.md) |
+| 五子棋 | 已完成，可持续强化 AI | 支持本地双人和三档人机对战，AI 具备即时攻防、复合棋型分类、VCF 与 PVS 搜索。 | [查看玩法与功能](games/game_gomoku/README.md) |
 
-计划后续加入 Tic-Tac-Toe 和 Maze 等游戏，并逐步完善五子棋人机对战。
+计划继续强化五子棋专家 AI，并逐步加入 Maze、黑白棋等适合集合定位的新游戏。
 
 ## 安装与运行
 
 ### Windows 免安装版
 
-从 [Releases](https://github.com/shiinawataru07/Mini-game-collection/releases) 下载 `Mini-Game-Collection-v1.1.0-Windows-x64.zip`，完整解压后运行 `MiniGameCollection.exe`。同名 `.sha256` 文件可用于校验下载完整性。
+从 [Releases](https://github.com/shiinawataru07/Mini-game-collection/releases) 下载 `Mini-Game-Collection-v1.2.0-Windows-x64.zip`，完整解压后运行 `MiniGameCollection.exe`。同名 `.sha256` 文件可用于校验下载完整性。
 
 ### 从源代码运行
 
@@ -106,7 +106,7 @@ mini-game-collection/
 │   │   ├── ui.py                   # 响应式棋盘与绘制
 │   │   └── game.py                 # 输入、计时和游戏主循环
 │   ├── game_tetris/                # 俄罗斯方块规则、SRS、输入、界面和主循环
-│   └── game_gomoku/                # 五子棋规则、木棋盘界面、模式选择和主循环
+│   └── game_gomoku/                # 五子棋规则、搜索 AI、木棋盘界面和主循环
 ├── docs/
 │   └── images/                     # 游戏说明文档使用的图片
 ├── tests/
@@ -164,8 +164,8 @@ GitHub Actions 会在每次推送和拉取请求时执行 Ruff，并在 Python 3
 
 ## 后续计划
 
-- 逐步加入 Tic-Tac-Toe 和 Maze
-- 为五子棋实现人机对战 AI
+- 实施五子棋 M3：VCT、威胁延伸、对称规约、开局库和 Elo 联赛
+- 逐步加入 Maze、黑白棋等新游戏
 - 只在多个游戏确实需要时提取共享组件和通用设置
 - 为新增游戏补充截图或演示 GIF
 - 继续完善各游戏的音效层次和动画反馈
