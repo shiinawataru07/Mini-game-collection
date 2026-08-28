@@ -4,6 +4,34 @@
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-08-29
+
+### 俄罗斯方块模式扩展
+
+- 增加经典无尽马拉松、40 行冲刺和两分钟计时三种可选模式
+- 增加模式选择界面、键盘数字快捷选择和 `Tab` 随时切换模式
+- 冲刺模式保存最快完成时间，计时模式保存两分钟最高分，原有马拉松纪录保持兼容
+- 增加模式专属目标、正计时/倒计时信息栏、完成结算提示与胜利音效
+- 补充模式选择截图，以及规则、存档、界面和音效自动化测试
+
+### 贪吃蛇地图工坊
+
+- 增加经典迷宫、十字路口、群岛和闸门四张经过连通性验证的内置地图
+- 增加游戏内地图编辑器，支持命名、连续绘制或擦除墙体、清空、试玩和导出
+- 定义版本化 `.snake-map.json` 文件格式，支持地图目录扫描与拖放文件导入
+- 导入和导出时校验地图尺寸、墙体坐标、出生区、可用空间和区域连通性
+- 自定义地图支持 8～40 格宽、6～30 格高，并在状态栏显示地图名称
+
+### 飞机大战
+
+- 新增像素风纵向卷轴射击游戏，并接入合集菜单数字快捷键 `6`
+- 支持自动射击、三类敌机、追踪弹幕、波次升级、生命与短暂无敌机制
+- 增加快速射击、能量护盾和生命修复道具，以及本地最高分记录
+- 使用程序绘制像素战机、星空与弹幕，并提供无需资源文件的合成街机音效
+- 核心模拟与界面分离，补充碰撞、计分、道具、存档和响应式布局测试
+- 增加三款属性不同的可选战机、强化精英敌机、每 5 波 Boss 战和像素爆炸动画
+- Boss 配备独立血条、五向弹幕、必掉道具与专属警报和击破音效
+
 ## [1.2.0] - 2026-08-23
 
 ### 五子棋 AI
@@ -94,7 +122,8 @@
 - Python 3.10–3.13 持续集成
 - Windows x64 可执行版本自动构建与 SHA-256 校验
 
-[Unreleased]: https://github.com/shiinawataru07/Mini-game-collection/compare/v1.2.0...HEAD
-[1.2.0]: https://github.com/shiinawataru07/Mini-game-collection/compare/v1.1.0...v1.2.0
+[Unreleased]: https://github.com/shiinawataru07/Mini-game-collection/compare/v1.3.0...HEAD
+[1.3.0]: https://github.com/shiinawataru07/Mini-game-collection/compare/fb5c766...v1.3.0
+[1.2.0]: https://github.com/shiinawataru07/Mini-game-collection/compare/v1.1.0...fb5c766
 [1.1.0]: https://github.com/shiinawataru07/Mini-game-collection/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/shiinawataru07/Mini-game-collection/releases/tag/v1.0.0

@@ -3,7 +3,13 @@ import unittest
 import pygame
 from games.game_tetris.config import DEFAULT_LANGUAGE, DEFAULT_THEME, TEXTS, THEMES
 from games.game_tetris.logic import new_game
-from games.game_tetris.ui import draw_game, page_layout, settings_controls
+from games.game_tetris.ui import (
+    draw_game,
+    format_time_ms,
+    mode_controls,
+    page_layout,
+    settings_controls,
+)
 
 
 class TetrisUiTests(unittest.TestCase):
@@ -42,6 +48,13 @@ class TetrisUiTests(unittest.TestCase):
         ):
             self.assertTrue(controls.modal.contains(rect))
 
+    def test_mode_controls_and_time_format(self):
+        controls = mode_controls((560, 640))
+        self.assertEqual(set(controls.cards), {"marathon", "sprint", "timed"})
+        self.assertTrue(all(controls.modal.contains(rect) for rect in controls.cards.values()))
+        self.assertEqual(format_time_ms(0), "00:00.00")
+        self.assertEqual(format_time_ms(125_678), "02:05.67")
+
     def test_game_and_settings_render_at_minimum_size(self):
         pygame.font.init()
         screen = pygame.Surface((560, 640))
@@ -55,6 +68,20 @@ class TetrisUiTests(unittest.TestCase):
             settings_open=True,
         )
         self.assertEqual(layout.board.size, (260, 520))
+
+    def test_all_modes_and_mode_selection_render(self):
+        pygame.font.init()
+        screen = pygame.Surface((760, 780))
+        for mode, best in (("marathon", 1000), ("sprint", 65_000), ("timed", 2500)):
+            with self.subTest(mode=mode):
+                draw_game(
+                    screen,
+                    new_game(mode=mode),
+                    best_score=best,
+                    theme_name="midnight",
+                    language="zh",
+                    mode_selecting=True,
+                )
 
 
 if __name__ == "__main__":

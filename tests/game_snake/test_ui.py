@@ -2,9 +2,17 @@
 
 import unittest
 
+import pygame
+from games.game_snake.logic import new_game
+from games.game_snake.maps import BUILTIN_MAPS, new_editor
 from games.game_snake.ui import (
     _font_language_for_text,
     _scaled_font_size,
+    draw_game,
+    draw_map_editor,
+    editor_cell_at,
+    editor_controls,
+    map_library_controls,
     mode_controls,
     page_layout,
     settings_controls,
@@ -63,8 +71,53 @@ class SnakeUiTests(unittest.TestCase):
         self.assertTrue(controls.modal.contains(controls.classic))
         self.assertTrue(controls.modal.contains(controls.wrap))
         self.assertTrue(controls.modal.contains(controls.maze))
+        self.assertTrue(controls.modal.contains(controls.workshop))
         self.assertFalse(controls.classic.colliderect(controls.wrap))
         self.assertFalse(controls.wrap.colliderect(controls.maze))
+        self.assertFalse(controls.maze.colliderect(controls.workshop))
+
+    def test_map_library_controls_fit_at_minimum_size(self):
+        controls = map_library_controls((560, 520), 6)
+        for rect in (
+            *controls.cards,
+            controls.editor,
+            controls.refresh,
+            controls.back,
+            controls.previous,
+            controls.next,
+        ):
+            self.assertTrue(controls.modal.contains(rect))
+
+    def test_editor_cell_mapping_and_controls(self):
+        controls = editor_controls((560, 520), (24, 18))
+        self.assertEqual(editor_cell_at(controls.board.topleft, controls, new_editor()), (0, 0))
+        self.assertIsNone(editor_cell_at((0, 0), controls, new_editor()))
+        bounds = pygame.Rect(0, 0, 560, 520)
+        for rect in (
+            controls.board,
+            controls.back,
+            controls.name,
+            controls.clear,
+            controls.export,
+            controls.play,
+        ):
+            self.assertTrue(bounds.contains(rect))
+
+    def test_map_library_and_editor_render_at_minimum_size(self):
+        pygame.font.init()
+        screen = pygame.Surface((560, 520))
+        draw_game(
+            screen,
+            new_game(),
+            0,
+            "garden",
+            "zh",
+            "normal",
+            map_selecting=True,
+            available_maps=BUILTIN_MAPS,
+        )
+        draw_map_editor(screen, new_editor(), "night", "zh")
+        self.assertNotEqual(screen.get_at(screen.get_rect().center), pygame.Color(0, 0, 0, 255))
 
 
 if __name__ == "__main__":

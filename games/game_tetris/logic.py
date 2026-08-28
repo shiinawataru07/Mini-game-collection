@@ -12,6 +12,8 @@ from .config import (
     LOCK_DELAY_MS,
     MAX_LOCK_RESETS,
     NEXT_COUNT,
+    SPRINT_TARGET_LINES,
+    TIMED_MODE_MS,
     gravity_interval_ms,
 )
 from .pieces import (
@@ -26,8 +28,17 @@ from .pieces import (
 )
 
 Board = tuple[tuple[int, ...], ...]
-GameStatus = Literal["running", "paused", "game_over"]
-GameEvent = Literal["moved", "rotated", "held", "locked", "lines_cleared", "game_over"]
+GameMode = Literal["marathon", "sprint", "timed"]
+GameStatus = Literal["running", "paused", "game_over", "completed"]
+GameEvent = Literal[
+    "moved",
+    "rotated",
+    "held",
+    "locked",
+    "lines_cleared",
+    "game_over",
+    "completed",
+]
 
 
 @dataclass(frozen=True)
@@ -54,6 +65,8 @@ class GameState:
     lock_elapsed_ms: float = 0.0
     lock_resets: int = 0
     status: GameStatus = "running"
+    mode: GameMode = "marathon"
+    elapsed_ms: float = 0.0
 
 
 @dataclass(frozen=True)
@@ -85,10 +98,12 @@ def _refill_queue(
     return tuple(pending), tuple(remaining)
 
 
-def new_game(rng=None) -> GameState:
+def new_game(rng=None, mode: GameMode = "marathon") -> GameState:
+    if mode not in ("marathon", "sprint", "timed"):
+        raise ValueError(f"Unknown game mode: {mode}")
     queue, bag = _refill_queue((), (), NEXT_COUNT + 1, rng)
     active = ActivePiece(queue[0])
-    return GameState(empty_board(), active, queue[1:], bag)
+    return GameState(empty_board(), active, queue[1:], bag, mode=mode)
 
 
 def active_cells(state: GameState) -> tuple[Cell, ...]:
@@ -242,10 +257,18 @@ def lock_piece(state: GameState, rng=None) -> Transition:
         level=level,
         combo=combo,
     )
-    spawned = _spawn_next(locked, rng)
     events: tuple[GameEvent, ...] = ("locked",)
     if cleared_rows:
         events += ("lines_cleared",)
+    if state.mode == "sprint" and total_lines >= SPRINT_TARGET_LINES:
+        completed = replace(locked, status="completed")
+        return Transition(
+            completed,
+            events + ("completed",),
+            cleared_rows,
+            gained_score=gained,
+        )
+    spawned = _spawn_next(locked, rng)
     if spawned.status == "game_over":
         events += ("game_over",)
     return Transition(spawned, events, cleared_rows, gained_score=gained)
@@ -305,8 +328,18 @@ def advance_time(state: GameState, elapsed_ms: float, rng=None) -> Transition:
     if state.status != "running" or elapsed_ms == 0:
         return Transition(state)
 
-    current = state
-    gravity = current.gravity_elapsed_ms + elapsed_ms
+    timed_out = False
+    effective_elapsed = elapsed_ms
+    if state.mode == "timed":
+        remaining = max(0.0, TIMED_MODE_MS - state.elapsed_ms)
+        effective_elapsed = min(elapsed_ms, remaining)
+        timed_out = elapsed_ms >= remaining
+
+    current = replace(
+        state,
+        elapsed_ms=state.elapsed_ms + effective_elapsed,
+    )
+    gravity = current.gravity_elapsed_ms + effective_elapsed
     interval = gravity_interval_ms(current.level)
     events: list[GameEvent] = []
     while gravity >= interval:
@@ -324,12 +357,25 @@ def advance_time(state: GameState, elapsed_ms: float, rng=None) -> Transition:
 
     current = replace(current, gravity_elapsed_ms=gravity)
     if is_grounded(current):
-        current = replace(current, lock_elapsed_ms=current.lock_elapsed_ms + elapsed_ms)
+        current = replace(
+            current,
+            lock_elapsed_ms=current.lock_elapsed_ms + effective_elapsed,
+        )
         if current.lock_elapsed_ms >= LOCK_DELAY_MS:
             result = lock_piece(current, rng)
-            return replace(result, events=tuple(events) + result.events)
+            result = replace(result, events=tuple(events) + result.events)
+            if timed_out and result.state.status == "running":
+                return replace(
+                    result,
+                    state=replace(result.state, status="completed"),
+                    events=result.events + ("completed",),
+                )
+            return result
     elif current.lock_elapsed_ms:
         current = replace(current, lock_elapsed_ms=0.0)
+    if timed_out:
+        current = replace(current, status="completed")
+        events.append("completed")
     return Transition(current, tuple(events))
 
 

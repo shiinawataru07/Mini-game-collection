@@ -23,6 +23,8 @@ class PlayerData:
     best_lines: int = 0
     theme: str = DEFAULT_THEME
     language: Language = DEFAULT_LANGUAGE
+    best_sprint_ms: int = 0
+    best_timed_score: int = 0
 
 
 def load_player_data(path: Path = PLAYER_DATA_PATH) -> PlayerData:
@@ -30,10 +32,12 @@ def load_player_data(path: Path = PLAYER_DATA_PATH) -> PlayerData:
     if payload is None:
         return PlayerData()
     return PlayerData(
-        non_negative_int(payload.get("best_score")),
-        non_negative_int(payload.get("best_lines")),
-        choice_or_default(payload.get("theme"), THEMES, DEFAULT_THEME),
-        choice_or_default(payload.get("language"), TEXTS, DEFAULT_LANGUAGE),
+        best_score=non_negative_int(payload.get("best_score")),
+        best_lines=non_negative_int(payload.get("best_lines")),
+        theme=choice_or_default(payload.get("theme"), THEMES, DEFAULT_THEME),
+        language=choice_or_default(payload.get("language"), TEXTS, DEFAULT_LANGUAGE),
+        best_sprint_ms=non_negative_int(payload.get("best_sprint_ms")),
+        best_timed_score=non_negative_int(payload.get("best_timed_score")),
     )
 
 
@@ -45,5 +49,7 @@ def save_player_data(data: PlayerData, path: Path = PLAYER_DATA_PATH) -> bool:
         "best_lines": max(0, data.best_lines),
         "theme": data.theme,
         "language": data.language,
+        "best_sprint_ms": max(0, data.best_sprint_ms),
+        "best_timed_score": max(0, data.best_timed_score),
     }
     return save_json_object(path, payload)

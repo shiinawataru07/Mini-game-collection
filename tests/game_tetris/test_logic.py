@@ -2,7 +2,13 @@ import random
 import unittest
 from dataclasses import replace
 
-from games.game_tetris.config import BOARD_HEIGHT, BOARD_WIDTH, LOCK_DELAY_MS
+from games.game_tetris.config import (
+    BOARD_HEIGHT,
+    BOARD_WIDTH,
+    LOCK_DELAY_MS,
+    SPRINT_TARGET_LINES,
+    TIMED_MODE_MS,
+)
 from games.game_tetris.logic import (
     ActivePiece,
     advance_time,
@@ -39,6 +45,12 @@ class TetrisLogicTests(unittest.TestCase):
         other = new_game(random.Random(7))
         self.assertEqual(first_sequence, (other.active.kind,) + other.next_queue)
 
+    def test_new_game_keeps_mode_and_rejects_unknown_mode(self):
+        self.assertEqual(new_game(self.rng, "sprint").mode, "sprint")
+        self.assertEqual(new_game(self.rng, "timed").mode, "timed")
+        with self.assertRaises(ValueError):
+            new_game(self.rng, "unknown")  # type: ignore[arg-type]
+
     def test_horizontal_movement_stops_at_wall(self):
         state = replace(new_game(self.rng), active=ActivePiece("O", x=-1, y=4))
         self.assertEqual(move(state, -1).state, state)
@@ -74,6 +86,28 @@ class TetrisLogicTests(unittest.TestCase):
         self.assertEqual(result.state.lines, 1)
         self.assertEqual(result.state.score, 100)
         self.assertTrue(all(value == 0 for value in result.state.board[0]))
+
+    def test_sprint_completes_when_fortieth_line_is_cleared(self):
+        bottom = BOARD_HEIGHT - 1
+        filled = ((column, bottom) for column in range(BOARD_WIDTH) if column not in range(3, 7))
+        state = replace(
+            new_game(self.rng, "sprint"),
+            board=board_with_cells(filled),
+            active=ActivePiece("I", rotation=0, x=3, y=bottom - 1),
+            lines=SPRINT_TARGET_LINES - 1,
+            elapsed_ms=12_345,
+        )
+        result = hard_drop(state, self.rng)
+        self.assertEqual(result.state.status, "completed")
+        self.assertEqual(result.state.lines, SPRINT_TARGET_LINES)
+        self.assertIn("completed", result.events)
+
+    def test_timed_mode_completes_at_two_minutes(self):
+        state = replace(new_game(self.rng, "timed"), elapsed_ms=TIMED_MODE_MS - 250)
+        result = advance_time(state, 500, self.rng)
+        self.assertEqual(result.state.status, "completed")
+        self.assertEqual(result.state.elapsed_ms, TIMED_MODE_MS)
+        self.assertIn("completed", result.events)
 
     def test_hold_can_only_be_used_once_before_locking(self):
         state = new_game(self.rng)
@@ -121,11 +155,12 @@ class TetrisLogicTests(unittest.TestCase):
         self.assertIn("game_over", result.events)
 
     def test_pause_freezes_time_and_actions(self):
-        state = new_game(self.rng)
+        state = new_game(self.rng, "timed")
         paused = toggle_pause(state)
         self.assertEqual(paused.status, "paused")
         self.assertEqual(advance_time(paused, 500, self.rng).state, paused)
         self.assertEqual(move(paused, 1).state, paused)
+        self.assertEqual(advance_time(paused, 500, self.rng).state.elapsed_ms, 0)
         self.assertEqual(toggle_pause(paused).status, "running")
 
     def test_invalid_time_is_rejected(self):

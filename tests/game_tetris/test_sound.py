@@ -21,7 +21,11 @@ class TetrisSoundTests(unittest.TestCase):
         sounds.play_transition(Transition(state, ("held",)))
         sounds.play_transition(Transition(state, ("locked", "lines_cleared"), (20, 21)))
         sounds.play_transition(Transition(state, ("locked", "game_over")))
-        self.assertEqual(sounds.bank.played, ["rotate", "hold", "clear_2", "game_over"])
+        sounds.play_transition(Transition(state, ("locked", "lines_cleared", "completed"), (21,)))
+        self.assertEqual(
+            sounds.bank.played,
+            ["rotate", "hold", "clear_2", "game_over", "completed"],
+        )
 
 
 if __name__ == "__main__":

@@ -30,6 +30,10 @@ class GameSounds:
                 "game_over": sequence_samples(
                     ((246.94, 90), (185, 110), (123.47, 180)), amplitude=0.2
                 ),
+                "completed": sequence_samples(
+                    ((523.25, 70), (659.25, 70), (783.99, 70), (1046.5, 180)),
+                    amplitude=0.2,
+                ),
             },
             settings,
         )
@@ -38,7 +42,9 @@ class GameSounds:
         self.bank.update_settings(settings)
 
     def play_transition(self, transition: Transition) -> None:
-        if "game_over" in transition.events:
+        if "completed" in transition.events:
+            self.bank.play("completed")
+        elif "game_over" in transition.events:
             self.bank.play("game_over")
         elif transition.cleared_rows:
             self.bank.play(f"clear_{min(4, len(transition.cleared_rows))}")

@@ -24,6 +24,8 @@ MAX_LOCK_RESETS = 15
 DAS_MS = 160
 ARR_MS = 45
 LINE_CLEAR_ANIMATION_MS = 180
+SPRINT_TARGET_LINES = 40
+TIMED_MODE_MS = 120_000
 
 DEFAULT_THEME = "midnight"
 DEFAULT_LANGUAGE: Language = "zh"
@@ -116,6 +118,20 @@ TEXTS: dict[Language, dict[str, str]] = {
         "best": "Best",
         "lines": "Lines",
         "level": "Level",
+        "time": "Time",
+        "best_time": "Best time",
+        "target": "Target",
+        "choose_mode": "Choose a mode",
+        "choose_mode_hint": "Press 1 / 2 / 3 or click a card · Tab changes mode",
+        "marathon": "Marathon",
+        "marathon_desc": "Classic endless play · level up every 10 lines",
+        "sprint": "Sprint",
+        "sprint_desc": "Clear 40 lines as quickly as possible",
+        "timed": "Timed",
+        "timed_desc": "Score as much as possible in 2 minutes",
+        "sprint_complete": "Sprint Complete!",
+        "timed_complete": "Time's Up!",
+        "change_mode_hint": "R restarts · Tab changes mode",
         "hold": "HOLD",
         "next": "NEXT",
         "paused": "Paused",
@@ -129,7 +145,7 @@ TEXTS: dict[Language, dict[str, str]] = {
         "english": "English",
         "chinese": "中文",
         "close": "Close",
-        "hint": "Arrows/WASD move · Z/X rotate · Space hard drop · C hold · P pause",
+        "hint": "Arrows/WASD move · Z/X rotate · Space hard drop · C hold · P pause · Tab mode",
     },
     "zh": {
         "back": "返回",
@@ -141,6 +157,20 @@ TEXTS: dict[Language, dict[str, str]] = {
         "best": "最高分",
         "lines": "消行",
         "level": "等级",
+        "time": "时间",
+        "best_time": "最佳时间",
+        "target": "目标",
+        "choose_mode": "选择游戏模式",
+        "choose_mode_hint": "按 1 / 2 / 3 或点击卡片 · Tab 可切换模式",
+        "marathon": "马拉松",
+        "marathon_desc": "经典无尽玩法 · 每 10 行提升等级",
+        "sprint": "冲刺",
+        "sprint_desc": "以最快速度消除 40 行",
+        "timed": "计时",
+        "timed_desc": "在 2 分钟内争取最高分",
+        "sprint_complete": "冲刺完成！",
+        "timed_complete": "时间到！",
+        "change_mode_hint": "R 再来一局 · Tab 切换模式",
         "hold": "暂存",
         "next": "下一个",
         "paused": "已暂停",
@@ -154,7 +184,7 @@ TEXTS: dict[Language, dict[str, str]] = {
         "english": "English",
         "chinese": "中文",
         "close": "关闭",
-        "hint": "方向键/WASD 移动 · Z/X 旋转 · 空格硬降 · C 暂存 · P 暂停",
+        "hint": "方向键/WASD 移动 · Z/X 旋转 · 空格硬降 · C 暂存 · P 暂停 · Tab 模式",
     },
 }
 

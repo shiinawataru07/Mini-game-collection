@@ -11,6 +11,7 @@ import pygame
 
 from games.common.types import Navigation
 from games.game_2048.preview import draw_preview as draw_2048_preview
+from games.game_aircraft.preview import draw_preview as draw_aircraft_preview
 from games.game_gomoku.preview import draw_preview as draw_gomoku_preview
 from games.game_minesweeper.preview import draw_preview as draw_minesweeper_preview
 from games.game_snake.preview import draw_preview as draw_snake_preview
@@ -85,6 +86,15 @@ GAMES: tuple[GameDescriptor, ...] = (
         accent=(150, 96, 52),
         runner="games.game_gomoku.game:run",
         preview=draw_gomoku_preview,
+    ),
+    GameDescriptor(
+        id="aircraft",
+        title="飞机大战",
+        subtitle="像素空战 · 射击",
+        shortcut=6,
+        accent=(55, 191, 194),
+        runner="games.game_aircraft.game:run",
+        preview=draw_aircraft_preview,
     ),
 )
 

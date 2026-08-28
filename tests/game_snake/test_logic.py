@@ -18,6 +18,7 @@ from games.game_snake.logic import (
     new_game,
     spawn_food,
 )
+from games.game_snake.maps import SnakeMap
 
 
 class FirstChoiceRandom:
@@ -42,6 +43,14 @@ class SnakeLogicTests(unittest.TestCase):
         self.assertEqual(new_game(mode="classic").mode, "classic")
         self.assertEqual(new_game(mode="wrap").mode, "wrap")
         self.assertEqual(new_game(mode="maze").mode, "maze")
+
+    def test_new_game_can_use_a_valid_imported_map(self):
+        game_map = SnakeMap("自定义", 12, 8, frozenset({(1, 1), (2, 1)}))
+        state = new_game(game_map=game_map, rng=FirstChoiceRandom())
+        self.assertEqual(state.mode, "custom")
+        self.assertEqual(state.map_name, "自定义")
+        self.assertEqual(state.walls, game_map.walls)
+        self.assertEqual((state.width, state.height), (12, 8))
 
     def test_reverse_direction_is_ignored(self):
         self.assertEqual(change_direction("right", "left"), "right")

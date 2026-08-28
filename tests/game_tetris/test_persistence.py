@@ -9,7 +9,7 @@ class TetrisPersistenceTests(unittest.TestCase):
     def test_round_trip_records_and_preferences(self):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "player.json"
-            expected = PlayerData(12345, 42, "classic", "en")
+            expected = PlayerData(12345, 42, "classic", "en", 65432, 9876)
             self.assertTrue(save_player_data(expected, path))
             self.assertEqual(load_player_data(path), expected)
 
@@ -20,6 +20,8 @@ class TetrisPersistenceTests(unittest.TestCase):
             data = load_player_data(path)
             self.assertEqual(data.best_score, 0)
             self.assertEqual(data.theme, "midnight")
+            self.assertEqual(data.best_sprint_ms, 0)
+            self.assertEqual(data.best_timed_score, 0)
 
 
 if __name__ == "__main__":

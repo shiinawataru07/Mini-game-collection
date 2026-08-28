@@ -15,11 +15,12 @@ from .config import (
     GRID_WIDTH,
     INITIAL_SNAKE_LENGTH,
 )
+from .maps import BUILTIN_MAPS, SnakeMap, initial_snake_cells, validate_map
 
 Cell = tuple[int, int]
 Direction = Literal["up", "down", "left", "right"]
 GameStatus = Literal["ready", "running", "paused", "game_over", "won"]
-GameMode = Literal["classic", "wrap", "maze"]
+GameMode = Literal["classic", "wrap", "maze", "custom"]
 Collision = Literal["wall", "self", "obstacle"]
 
 DIRECTION_VECTORS: dict[Direction, Cell] = {
@@ -52,6 +53,7 @@ class GameState:
     bonus_food: Cell | None = None
     bonus_remaining_ms: float = 0.0
     foods_eaten: int = 0
+    map_name: str = ""
 
 
 @dataclass(frozen=True)
@@ -122,16 +124,7 @@ def create_maze(width: int, height: int, snake: tuple[Cell, ...] = ()) -> frozen
             )
 
     if width == GRID_WIDTH and height == GRID_HEIGHT:
-        vertical(4, 1, 14, {4, 9})
-        vertical(11, 1, 8, {5})
-        vertical(18, 2, 16, {6, 12})
-        vertical(8, 11, 17, {14})
-        vertical(15, 10, 17, {13})
-        horizontal(3, 5, 11, {8})
-        horizontal(7, 6, 18, {10, 14})
-        horizontal(10, 16, 23, {20})
-        horizontal(12, 1, 8, {4})
-        horizontal(15, 9, 21, {13, 17})
+        walls.update(BUILTIN_MAPS[0].walls)
     else:
         first_x = max(2, width // 3)
         second_x = min(width - 2, width * 2 // 3)
@@ -149,16 +142,28 @@ def new_game(
     height: int = GRID_HEIGHT,
     mode: GameMode = "classic",
     rng=None,
+    game_map: SnakeMap | None = None,
 ) -> GameState:
+    if game_map is not None:
+        game_map = validate_map(game_map)
+        width = game_map.width
+        height = game_map.height
+        mode = "custom"
     if width < INITIAL_SNAKE_LENGTH + 1 or height < 3:
         raise ValueError("The Snake board is too small.")
-    if mode not in ("classic", "wrap", "maze"):
+    if mode not in ("classic", "wrap", "maze", "custom"):
         raise ValueError(f"Unsupported Snake mode: {mode}")
+    if mode == "custom" and game_map is None:
+        raise ValueError("Custom mode requires a validated map.")
 
-    head_x = width // 2
-    head_y = height // 2
-    snake = tuple((head_x - offset, head_y) for offset in range(INITIAL_SNAKE_LENGTH))
-    walls = create_maze(width, height, snake) if mode == "maze" else frozenset()
+    snake = initial_snake_cells(width, height)
+    walls = (
+        game_map.walls
+        if game_map is not None
+        else create_maze(width, height, snake)
+        if mode == "maze"
+        else frozenset()
+    )
     return GameState(
         width=width,
         height=height,
@@ -167,6 +172,7 @@ def new_game(
         food=spawn_food(width, height, snake, rng, walls),
         mode=mode,
         walls=walls,
+        map_name=game_map.name if game_map is not None else "",
     )
 
 
@@ -302,6 +308,7 @@ def advance(state: GameState, rng=None) -> StepResult:
             bonus_food=bonus_food,
             bonus_remaining_ms=bonus_remaining_ms,
             foods_eaten=foods_eaten,
+            map_name=state.map_name,
         ),
         ate_food=ate_food,
         ate_bonus=ate_bonus,

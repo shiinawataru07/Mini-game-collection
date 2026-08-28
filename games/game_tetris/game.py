@@ -27,6 +27,7 @@ from .config import (
 )
 from .input import HorizontalDirection, HorizontalInput
 from .logic import (
+    GameMode,
     Transition,
     advance_time,
     hard_drop,
@@ -39,7 +40,7 @@ from .logic import (
 )
 from .persistence import PlayerData, load_player_data, save_player_data
 from .sound import GameSounds
-from .ui import draw_game, settings_controls
+from .ui import draw_game, mode_controls, settings_controls
 
 HORIZONTAL_KEYS: dict[int, HorizontalDirection] = {
     pygame.K_LEFT: "left",
@@ -65,11 +66,14 @@ def run() -> Navigation:
     player_data = load_player_data()
     best_score = player_data.best_score
     best_lines = player_data.best_lines
+    best_sprint_ms = player_data.best_sprint_ms
+    best_timed_score = player_data.best_timed_score
     theme_name = player_data.theme if player_data.theme in THEMES else DEFAULT_THEME
     language = cast(
         Language, player_data.language if player_data.language in TEXTS else DEFAULT_LANGUAGE
     )
     state = new_game(rng)
+    mode_selecting = True
     horizontal = HorizontalInput()
     soft_drop_held = False
     soft_drop_elapsed = 0.0
@@ -80,7 +84,23 @@ def run() -> Navigation:
     running = True
 
     def persist() -> None:
-        save_player_data(PlayerData(best_score, best_lines, theme_name, language))
+        save_player_data(
+            PlayerData(
+                best_score=best_score,
+                best_lines=best_lines,
+                theme=theme_name,
+                language=language,
+                best_sprint_ms=best_sprint_ms,
+                best_timed_score=best_timed_score,
+            )
+        )
+
+    def current_best() -> int:
+        if state.mode == "sprint":
+            return best_sprint_ms
+        if state.mode == "timed":
+            return best_timed_score
+        return best_score
 
     def reset_inputs() -> None:
         nonlocal soft_drop_elapsed, soft_drop_held
@@ -89,25 +109,42 @@ def run() -> Navigation:
         soft_drop_elapsed = 0.0
 
     def apply_transition(transition: Transition, now: int) -> None:
-        nonlocal animation, best_lines, best_score, state
+        nonlocal animation, best_lines, best_score, best_sprint_ms, best_timed_score, state
         state = transition.state
         sounds.play_transition(transition)
         if transition.cleared_rows:
             animation = animation_from_transition(transition, now)
         changed_record = False
-        if state.score > best_score:
-            best_score = state.score
+        if state.mode == "marathon":
+            if state.score > best_score:
+                best_score = state.score
+                changed_record = True
+            if state.lines > best_lines:
+                best_lines = state.lines
+                changed_record = True
+        elif state.mode == "sprint" and state.status == "completed":
+            result_ms = max(1, round(state.elapsed_ms))
+            if best_sprint_ms == 0 or result_ms < best_sprint_ms:
+                best_sprint_ms = result_ms
+                changed_record = True
+        elif state.mode == "timed" and state.score > best_timed_score:
+            best_timed_score = state.score
             changed_record = True
-        if state.lines > best_lines:
-            best_lines = state.lines
-            changed_record = True
-        if changed_record or "game_over" in transition.events:
+        if changed_record or any(event in transition.events for event in ("game_over", "completed")):
             persist()
 
     def restart() -> None:
         nonlocal animation, settings_open, state
-        state = new_game(rng)
+        state = new_game(rng, state.mode)
         animation = None
+        settings_open = False
+        reset_inputs()
+
+    def select_mode(mode: GameMode) -> None:
+        nonlocal animation, mode_selecting, settings_open, state
+        state = new_game(rng, mode)
+        animation = None
+        mode_selecting = False
         settings_open = False
         reset_inputs()
 
@@ -148,7 +185,12 @@ def run() -> Navigation:
             if event.type == pygame.KEYUP:
                 if event.key in HORIZONTAL_KEYS:
                     fallback = horizontal.release(HORIZONTAL_KEYS[event.key])
-                    if fallback is not None and state.status == "running" and not settings_open:
+                    if (
+                        fallback is not None
+                        and state.status == "running"
+                        and not settings_open
+                        and not mode_selecting
+                    ):
                         horizontal_move(fallback, now)
                 elif event.key in SOFT_DROP_KEYS:
                     soft_drop_held = False
@@ -168,33 +210,54 @@ def run() -> Navigation:
                         set_settings(False)
                     else:
                         running = False
+                elif event.key == pygame.K_TAB and not settings_open:
+                    mode_selecting = True
+                    reset_inputs()
+                elif mode_selecting and event.key in (pygame.K_1, pygame.K_KP1):
+                    select_mode("marathon")
+                elif mode_selecting and event.key in (pygame.K_2, pygame.K_KP2):
+                    select_mode("sprint")
+                elif mode_selecting and event.key in (pygame.K_3, pygame.K_KP3):
+                    select_mode("timed")
                 elif event.key == pygame.K_r:
                     restart()
-                elif event.key == pygame.K_p and not settings_open:
+                    mode_selecting = False
+                elif event.key == pygame.K_p and not settings_open and not mode_selecting:
                     state = toggle_pause(state)
                     reset_inputs()
                 elif (
-                    event.key in HORIZONTAL_KEYS and state.status == "running" and not settings_open
+                    event.key in HORIZONTAL_KEYS
+                    and state.status == "running"
+                    and not settings_open
+                    and not mode_selecting
                 ):
                     direction = horizontal.press(HORIZONTAL_KEYS[event.key])
                     if direction is not None:
                         horizontal_move(direction, now)
                 elif (
-                    event.key in SOFT_DROP_KEYS and state.status == "running" and not settings_open
+                    event.key in SOFT_DROP_KEYS
+                    and state.status == "running"
+                    and not settings_open
+                    and not mode_selecting
                 ):
                     if not soft_drop_held:
                         soft_drop_held = True
                         soft_drop_elapsed = 0.0
                         apply_transition(soft_drop(state), now)
-                elif event.key in (pygame.K_UP, pygame.K_x, pygame.K_w) and not settings_open:
+                elif (
+                    event.key in (pygame.K_UP, pygame.K_x, pygame.K_w)
+                    and not settings_open
+                    and not mode_selecting
+                ):
                     apply_transition(rotate(state, "clockwise"), now)
-                elif event.key == pygame.K_z and not settings_open:
+                elif event.key == pygame.K_z and not settings_open and not mode_selecting:
                     apply_transition(rotate(state, "counterclockwise"), now)
-                elif event.key == pygame.K_SPACE and not settings_open:
+                elif event.key == pygame.K_SPACE and not settings_open and not mode_selecting:
                     apply_transition(hard_drop(state, rng), now)
                 elif (
                     event.key in (pygame.K_c, pygame.K_LSHIFT, pygame.K_RSHIFT)
                     and not settings_open
+                    and not mode_selecting
                 ):
                     apply_transition(hold_piece(state, rng), now)
                 continue
@@ -218,7 +281,15 @@ def run() -> Navigation:
                             break
                 continue
 
-            layout = draw_game(screen, state, best_score, theme_name, language)
+            if mode_selecting:
+                controls = mode_controls(screen.get_size())
+                for selected_mode, rect in controls.cards.items():
+                    if rect.collidepoint(event.pos):
+                        select_mode(selected_mode)
+                        break
+                continue
+
+            layout = draw_game(screen, state, current_best(), theme_name, language)
             if layout.back.collidepoint(event.pos):
                 running = False
             elif layout.pause.collidepoint(event.pos):
@@ -232,7 +303,7 @@ def run() -> Navigation:
         if not running:
             continue
 
-        if state.status == "running" and not settings_open:
+        if state.status == "running" and not settings_open and not mode_selecting:
             for direction in horizontal.advance(elapsed_ms):
                 horizontal_move(direction, now)
             if soft_drop_held:
@@ -245,12 +316,13 @@ def run() -> Navigation:
         draw_game(
             screen,
             state,
-            best_score,
+            current_best(),
             theme_name,
             language,
             settings_open,
             animation,
             now,
+            mode_selecting,
         )
         pygame.display.flip()
 

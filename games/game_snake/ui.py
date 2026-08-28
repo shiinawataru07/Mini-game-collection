@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import math
+from collections.abc import Sequence
 from dataclasses import dataclass
 
 import pygame
@@ -22,6 +23,7 @@ from .config import (
     text,
 )
 from .logic import Direction, GameState
+from .maps import BUILTIN_MAPS, EditorState, SnakeMap, protected_cells
 
 ENGLISH_FONT_SCALE = 1.15
 
@@ -55,6 +57,29 @@ class ModeControls:
     classic: pygame.Rect
     wrap: pygame.Rect
     maze: pygame.Rect
+    workshop: pygame.Rect
+
+
+@dataclass(frozen=True)
+class MapLibraryControls:
+    modal: pygame.Rect
+    cards: tuple[pygame.Rect, ...]
+    editor: pygame.Rect
+    refresh: pygame.Rect
+    back: pygame.Rect
+    previous: pygame.Rect
+    next: pygame.Rect
+
+
+@dataclass(frozen=True)
+class EditorControls:
+    board: pygame.Rect
+    back: pygame.Rect
+    name: pygame.Rect
+    clear: pygame.Rect
+    export: pygame.Rect
+    play: pygame.Rect
+    cell_size: int
 
 
 def _scaled_font_size(size: int, language: Language) -> int:
@@ -73,6 +98,10 @@ def _font_language_for_text(label: str, language: Language) -> Language:
 
 def _font(size: int, language: Language = DEFAULT_LANGUAGE, bold: bool = False) -> pygame.font.Font:
     return get_font(_scaled_font_size(size, language), language, bold, minimum_size=14)
+
+
+def _mouse_position() -> tuple[int, int]:
+    return pygame.mouse.get_pos() if pygame.display.get_init() else (-1, -1)
 
 
 def page_layout(window_size: tuple[int, int], grid_size: tuple[int, int]) -> Layout:
@@ -142,15 +171,63 @@ def settings_controls(window_size: tuple[int, int]) -> SettingsControls:
 
 def mode_controls(window_size: tuple[int, int]) -> ModeControls:
     width, height = window_size
-    modal = pygame.Rect(0, 0, min(700, width - 36), min(350, height - 36))
+    modal = pygame.Rect(0, 0, min(700, width - 36), min(440, height - 36))
     modal.center = (width // 2, height // 2)
     gap = 12
-    card_width = (modal.width - 54 - gap * 2) // 3
-    classic = pygame.Rect(modal.left + 27, modal.top + 105, card_width, 175)
-    wrap = pygame.Rect(classic.right + gap, classic.top, card_width, 155)
-    wrap.height = classic.height
-    maze = pygame.Rect(wrap.right + gap, classic.top, card_width, classic.height)
-    return ModeControls(modal, classic, wrap, maze)
+    card_width = (modal.width - 54 - gap) // 2
+    card_height = max(115, (modal.height - 135 - gap) // 2)
+    classic = pygame.Rect(modal.left + 27, modal.top + 82, card_width, card_height)
+    wrap = pygame.Rect(classic.right + gap, classic.top, card_width, card_height)
+    maze = pygame.Rect(classic.left, classic.bottom + gap, card_width, card_height)
+    workshop = pygame.Rect(wrap.left, wrap.bottom + gap, card_width, card_height)
+    return ModeControls(modal, classic, wrap, maze, workshop)
+
+
+def map_library_controls(window_size: tuple[int, int], count: int) -> MapLibraryControls:
+    width, height = window_size
+    modal = pygame.Rect(0, 0, min(760, width - 28), min(570, height - 28))
+    modal.center = (width // 2, height // 2)
+    gap = 10
+    columns = 3 if modal.width >= 650 else 2
+    rows = 2 if columns == 3 else 3
+    card_width = (modal.width - 44 - gap * (columns - 1)) // columns
+    card_height = max(78, (modal.height - 160 - gap * (rows - 1)) // rows)
+    cards = tuple(
+        pygame.Rect(
+            modal.left + 22 + (index % columns) * (card_width + gap),
+            modal.top + 72 + (index // columns) * (card_height + gap),
+            card_width,
+            card_height,
+        )
+        for index in range(min(6, count))
+    )
+    button_width = max(78, min(108, (modal.width - 80) // 5))
+    button_y = modal.bottom - 48
+    back = pygame.Rect(modal.left + 20, button_y, button_width, 32)
+    editor = pygame.Rect(back.right + 8, button_y, button_width, 32)
+    refresh = pygame.Rect(editor.right + 8, button_y, button_width, 32)
+    next_button = pygame.Rect(modal.right - 20 - button_width, button_y, button_width, 32)
+    previous = pygame.Rect(next_button.left - 8 - button_width, button_y, button_width, 32)
+    return MapLibraryControls(modal, cards, editor, refresh, back, previous, next_button)
+
+
+def editor_controls(window_size: tuple[int, int], grid_size: tuple[int, int]) -> EditorControls:
+    width, height = window_size
+    columns, rows = grid_size
+    margin = 16
+    header = 126
+    footer = 38
+    cell_size = max(1, min((width - margin * 2) // columns, (height - header - footer) // rows))
+    board = pygame.Rect(0, header, cell_size * columns, cell_size * rows)
+    board.centerx = width // 2
+    gap = 7
+    button_width = max(70, min(94, (width - margin * 2 - gap * 4) // 5))
+    controls_width = button_width * 5 + gap * 4
+    left = (width - controls_width) // 2
+    buttons = [
+        pygame.Rect(left + index * (button_width + gap), 18, button_width, 34) for index in range(5)
+    ]
+    return EditorControls(board, *buttons, cell_size)
 
 
 def _draw_button(
@@ -368,8 +445,9 @@ def _draw_mode_selection(
         ("classic", controls.classic),
         ("wrap", controls.wrap),
         ("maze", controls.maze),
+        ("workshop", controls.workshop),
     ):
-        hovered = rect.collidepoint(pygame.mouse.get_pos())
+        hovered = rect.collidepoint(_mouse_position())
         pygame.draw.rect(screen, theme.background, rect, border_radius=14)
         pygame.draw.rect(
             screen,
@@ -379,10 +457,10 @@ def _draw_mode_selection(
             border_radius=14,
         )
         mode_title = _font(23, language, True).render(text(language, mode), True, theme.text)
-        shortcut_text = {"classic": "1", "wrap": "2", "maze": "3"}[mode]
+        shortcut_text = {"classic": "1", "wrap": "2", "maze": "3", "workshop": "4"}[mode]
         shortcut = _font(18, language, True).render(shortcut_text, True, theme.accent)
-        screen.blit(shortcut, shortcut.get_rect(center=(rect.centerx, rect.top + 30)))
-        screen.blit(mode_title, mode_title.get_rect(center=(rect.centerx, rect.top + 72)))
+        screen.blit(shortcut, shortcut.get_rect(center=(rect.centerx, rect.top + 21)))
+        screen.blit(mode_title, mode_title.get_rect(center=(rect.centerx, rect.top + 49)))
         description_font = _font(14, language)
         description_text = text(language, f"{mode}_desc")
         separator = " " if " " in description_text else ""
@@ -398,12 +476,182 @@ def _draw_mode_selection(
                 current = candidate
         if current:
             lines.append(current)
-        for index, line in enumerate(lines[:3]):
+        for index, line in enumerate(lines[:2]):
             description = description_font.render(line, True, theme.muted_text)
             screen.blit(
                 description,
-                description.get_rect(center=(rect.centerx, rect.top + 108 + index * 20)),
+                description.get_rect(center=(rect.centerx, rect.top + 81 + index * 19)),
             )
+
+
+def _draw_mini_map(
+    screen: pygame.Surface,
+    game_map: SnakeMap,
+    area: pygame.Rect,
+    theme: Theme,
+) -> None:
+    scale = max(1, min(area.width // game_map.width, area.height // game_map.height))
+    board = pygame.Rect(0, 0, scale * game_map.width, scale * game_map.height)
+    board.center = area.center
+    pygame.draw.rect(screen, theme.board, board, border_radius=4)
+    for column, row in game_map.walls:
+        pygame.draw.rect(
+            screen,
+            theme.maze_wall,
+            (board.left + column * scale, board.top + row * scale, scale, scale),
+        )
+    pygame.draw.rect(screen, theme.grid, board, width=1, border_radius=4)
+
+
+def _draw_map_library(
+    screen: pygame.Surface,
+    maps: Sequence[SnakeMap],
+    page: int,
+    theme_name: str,
+    language: Language,
+    message: str,
+) -> None:
+    theme = THEMES[theme_name]
+    start = page * 6
+    visible = maps[start : start + 6]
+    controls = map_library_controls(screen.get_size(), len(visible))
+    draw_overlay(screen, theme.overlay, 185)
+    draw_panel(
+        screen,
+        controls.modal,
+        theme.panel,
+        border_color=theme.grid,
+        border_width=2,
+        border_radius=18,
+    )
+    title = _font(27, language, True).render(text(language, "choose_map"), True, theme.text)
+    screen.blit(title, title.get_rect(center=(controls.modal.centerx, controls.modal.top + 32)))
+    page_count = max(1, math.ceil(len(maps) / 6))
+    page_surface = _font(13, language).render(f"{page + 1} / {page_count}", True, theme.muted_text)
+    screen.blit(page_surface, (controls.modal.right - 65, controls.modal.top + 24))
+
+    for visible_index, (game_map, rect) in enumerate(
+        zip(visible, controls.cards, strict=False), start=1
+    ):
+        hovered = rect.collidepoint(_mouse_position())
+        pygame.draw.rect(screen, theme.background, rect, border_radius=10)
+        pygame.draw.rect(
+            screen,
+            theme.accent if hovered else theme.grid,
+            rect,
+            width=3 if hovered else 1,
+            border_radius=10,
+        )
+        preview = pygame.Rect(
+            rect.left + 8, rect.top + 8, rect.width - 16, max(34, rect.height - 54)
+        )
+        _draw_mini_map(screen, game_map, preview, theme)
+        name = _font(15, language, True).render(game_map.name[:18], True, theme.text)
+        source_key = "builtin_map" if game_map in BUILTIN_MAPS else "custom_map"
+        source = _font(11, language).render(text(language, source_key), True, theme.muted_text)
+        shortcut = _font(12, language, True).render(str(visible_index), True, theme.accent)
+        screen.blit(shortcut, (rect.left + 7, rect.top + 4))
+        screen.blit(name, name.get_rect(midbottom=(rect.centerx, rect.bottom - 20)))
+        screen.blit(source, source.get_rect(midbottom=(rect.centerx, rect.bottom - 5)))
+
+    _draw_button(screen, controls.back, text(language, "map_back"), theme, language)
+    _draw_button(screen, controls.editor, text(language, "new_map"), theme, language)
+    _draw_button(screen, controls.refresh, text(language, "refresh_maps"), theme, language)
+    _draw_button(
+        screen,
+        controls.previous,
+        text(language, "previous_page"),
+        theme,
+        language,
+        enabled=page > 0,
+    )
+    _draw_button(
+        screen,
+        controls.next,
+        text(language, "next_page"),
+        theme,
+        language,
+        enabled=page + 1 < page_count,
+    )
+    footer = (message or text(language, "drop_map_hint"))[:82]
+    footer_surface = _font(12, language).render(footer, True, theme.muted_text)
+    screen.blit(
+        footer_surface,
+        footer_surface.get_rect(center=(controls.modal.centerx, controls.modal.bottom - 66)),
+    )
+
+
+def editor_cell_at(
+    position: tuple[int, int],
+    controls: EditorControls,
+    editor: EditorState,
+) -> tuple[int, int] | None:
+    if not controls.board.collidepoint(position):
+        return None
+    return (
+        (position[0] - controls.board.left) // controls.cell_size,
+        (position[1] - controls.board.top) // controls.cell_size,
+    )
+
+
+def draw_map_editor(
+    screen: pygame.Surface,
+    editor: EditorState,
+    theme_name: str,
+    language: Language,
+) -> EditorControls:
+    theme = THEMES[theme_name]
+    controls = editor_controls(screen.get_size(), (editor.width, editor.height))
+    screen.fill(theme.background)
+    title = _font(23, language, True).render(text(language, "workshop"), True, theme.text)
+    screen.blit(title, title.get_rect(center=(screen.get_width() // 2, 72)))
+    _draw_button(screen, controls.back, text(language, "map_back"), theme, language)
+    _draw_button(
+        screen,
+        controls.name,
+        f"{text(language, 'map_name')}*" if editor.editing_name else text(language, "map_name"),
+        theme,
+        language,
+        editor.editing_name,
+    )
+    _draw_button(screen, controls.clear, text(language, "clear_map"), theme, language)
+    _draw_button(screen, controls.export, text(language, "export_map"), theme, language)
+    _draw_button(screen, controls.play, text(language, "play_map"), theme, language)
+    name = _font(17, language, True).render((editor.name or "_")[:26], True, theme.accent)
+    screen.blit(name, name.get_rect(center=(screen.get_width() // 2, 99)))
+
+    pygame.draw.rect(screen, theme.board, controls.board, border_radius=8)
+    for column in range(editor.width + 1):
+        x = controls.board.left + column * controls.cell_size
+        pygame.draw.line(screen, theme.grid, (x, controls.board.top), (x, controls.board.bottom))
+    for row in range(editor.height + 1):
+        y = controls.board.top + row * controls.cell_size
+        pygame.draw.line(screen, theme.grid, (controls.board.left, y), (controls.board.right, y))
+    for cell in protected_cells(editor.width, editor.height):
+        rect = pygame.Rect(
+            controls.board.left + cell[0] * controls.cell_size + 1,
+            controls.board.top + cell[1] * controls.cell_size + 1,
+            max(1, controls.cell_size - 1),
+            max(1, controls.cell_size - 1),
+        )
+        pygame.draw.rect(screen, theme.snake_body, rect)
+    for column, row in editor.walls:
+        rect = pygame.Rect(
+            controls.board.left + column * controls.cell_size + 1,
+            controls.board.top + row * controls.cell_size + 1,
+            max(1, controls.cell_size - 1),
+            max(1, controls.cell_size - 1),
+        )
+        pygame.draw.rect(
+            screen, theme.maze_wall, rect, border_radius=max(1, controls.cell_size // 7)
+        )
+    pygame.draw.rect(screen, theme.accent, controls.board, width=2, border_radius=8)
+    hint = _font(12, language).render(text(language, "editor_hint"), True, theme.muted_text)
+    message = _font(12, language, True).render(editor.message[:70], True, theme.text)
+    bottom = min(screen.get_height() - 8, controls.board.bottom + 19)
+    screen.blit(hint, hint.get_rect(center=(screen.get_width() // 2, bottom)))
+    screen.blit(message, message.get_rect(center=(screen.get_width() // 2, bottom + 17)))
+    return controls
 
 
 def draw_game(
@@ -415,6 +663,10 @@ def draw_game(
     speed: Speed,
     settings_open: bool = False,
     mode_selecting: bool = False,
+    map_selecting: bool = False,
+    available_maps: Sequence[SnakeMap] = (),
+    map_page: int = 0,
+    map_message: str = "",
 ) -> Layout:
     """Draw one complete frame and return the current clickable layout."""
 
@@ -452,7 +704,7 @@ def draw_game(
         screen,
         layout.mode,
         text(language, "mode"),
-        text(language, f"{state.mode}_short"),
+        state.map_name[:10] if state.mode == "custom" else text(language, f"{state.mode}_short"),
         theme,
         language,
     )
@@ -466,7 +718,7 @@ def draw_game(
     hint_y = min(screen.get_height() - 24, layout.board.bottom + 22)
     screen.blit(hint, hint.get_rect(center=(screen.get_width() // 2, hint_y)))
 
-    if state.status == "ready" and not mode_selecting:
+    if state.status == "ready" and not mode_selecting and not map_selecting:
         _draw_overlay(screen, layout, text(language, "ready"), "WASD / ↑ ↓ ← →", theme, language)
     elif state.status == "paused" and not settings_open:
         _draw_overlay(
@@ -481,4 +733,13 @@ def draw_game(
         _draw_settings(screen, theme_name, language, speed)
     elif mode_selecting:
         _draw_mode_selection(screen, theme_name, language)
+    elif map_selecting:
+        _draw_map_library(
+            screen,
+            available_maps,
+            map_page,
+            theme_name,
+            language,
+            map_message,
+        )
     return layout

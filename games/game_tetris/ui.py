@@ -10,8 +10,17 @@ from games.common.controls import draw_button, draw_overlay, draw_panel
 from games.common.fonts import get_font
 
 from .animation import LineClearAnimation
-from .config import HIDDEN_ROWS, THEMES, VISIBLE_HEIGHT, Language, Theme, text
-from .logic import GameState, active_cells, ghost_y
+from .config import (
+    HIDDEN_ROWS,
+    SPRINT_TARGET_LINES,
+    THEMES,
+    TIMED_MODE_MS,
+    VISIBLE_HEIGHT,
+    Language,
+    Theme,
+    text,
+)
+from .logic import GameMode, GameState, active_cells, ghost_y
 from .pieces import PIECE_IDS, PieceKind, cells
 
 
@@ -34,6 +43,12 @@ class SettingsControls:
     close: pygame.Rect
     themes: dict[str, pygame.Rect]
     languages: dict[Language, pygame.Rect]
+
+
+@dataclass(frozen=True)
+class ModeControls:
+    modal: pygame.Rect
+    cards: dict[GameMode, pygame.Rect]
 
 
 def page_layout(window_size: tuple[int, int]) -> Layout:
@@ -89,6 +104,32 @@ def settings_controls(window_size: tuple[int, int]) -> SettingsControls:
         "en": pygame.Rect(left + language_width + gap, modal.top + 245, language_width, 46),
     }
     return SettingsControls(modal, close, themes, languages)
+
+
+def mode_controls(window_size: tuple[int, int]) -> ModeControls:
+    width, height = window_size
+    modal = pygame.Rect(0, 0, min(660, width - 32), min(330, height - 32))
+    modal.center = (width // 2, height // 2)
+    gap = 12
+    left = modal.left + 22
+    card_width = (modal.width - 44 - gap * 2) // 3
+    cards: dict[GameMode, pygame.Rect] = {
+        mode: pygame.Rect(
+            left + index * (card_width + gap),
+            modal.top + 105,
+            card_width,
+            150,
+        )
+        for index, mode in enumerate(("marathon", "sprint", "timed"))
+    }
+    return ModeControls(modal, cards)
+
+
+def format_time_ms(milliseconds: float) -> str:
+    milliseconds = max(0, round(milliseconds))
+    minutes, remainder = divmod(milliseconds, 60_000)
+    seconds, centiseconds = divmod(remainder, 1_000)
+    return f"{minutes:02d}:{seconds:02d}.{centiseconds // 10:02d}"
 
 
 def _button(
@@ -161,7 +202,7 @@ def _draw_board(
                 pygame.draw.rect(screen, theme.grid, rect, width=1, border_radius=2)
 
     ghost_row = ghost_y(state)
-    if state.status != "game_over" and ghost_row != state.active.y:
+    if state.status not in ("game_over", "completed") and ghost_row != state.active.y:
         for column, row in cells(
             state.active.kind,
             state.active.rotation,
@@ -176,7 +217,7 @@ def _draw_board(
                     ghost=True,
                 )
 
-    if state.status != "game_over":
+    if state.status not in ("game_over", "completed"):
         color = theme.pieces[PIECE_IDS[state.active.kind]]
         for column, row in active_cells(state):
             if row >= HIDDEN_ROWS:
@@ -253,17 +294,37 @@ def _draw_side_panels(
         )
 
     draw_panel(screen, layout.stats, theme.panel, border_color=theme.grid, border_radius=11)
-    stats = (
-        (text(language, "score"), state.score),
-        (text(language, "best"), max(best_score, state.score)),
-        (text(language, "lines"), state.lines),
-        (text(language, "level"), state.level),
-    )
+    if state.mode == "sprint":
+        best_value = format_time_ms(best_score) if best_score else "--:--.--"
+        stats = (
+            (text(language, "score"), str(state.score)),
+            (text(language, "best_time"), best_value),
+            (text(language, "lines"), f"{min(state.lines, SPRINT_TARGET_LINES)}/40"),
+            (text(language, "time"), format_time_ms(state.elapsed_ms)),
+        )
+    elif state.mode == "timed":
+        stats = (
+            (text(language, "score"), str(state.score)),
+            (text(language, "best"), str(max(best_score, state.score))),
+            (text(language, "lines"), str(state.lines)),
+            (
+                text(language, "time"),
+                format_time_ms(max(0, TIMED_MODE_MS - state.elapsed_ms)),
+            ),
+        )
+    else:
+        stats = (
+            (text(language, "score"), str(state.score)),
+            (text(language, "best"), str(max(best_score, state.score))),
+            (text(language, "lines"), str(state.lines)),
+            (text(language, "level"), str(state.level)),
+        )
     row_height = layout.stats.height // len(stats)
     for index, (label, value) in enumerate(stats):
         center_y = layout.stats.top + index * row_height + row_height // 2
         label_surface = small.render(label, True, theme.muted_text)
-        value_surface = get_font(19, bold=True).render(str(value), True, theme.text)
+        value_size = 16 if len(value) >= 8 else 19
+        value_surface = get_font(value_size, language, bold=True).render(value, True, theme.text)
         screen.blit(
             label_surface, label_surface.get_rect(midbottom=(layout.stats.centerx, center_y - 1))
         )
@@ -301,6 +362,69 @@ def _draw_settings(
         _button(screen, rect, text(language, key), theme, language, selected == language)
 
 
+def _wrapped_lines(
+    value: str,
+    font: pygame.font.Font,
+    max_width: int,
+) -> list[str]:
+    lines: list[str] = []
+    current = ""
+    for character in value:
+        candidate = current + character
+        if current and font.size(candidate)[0] > max_width:
+            lines.append(current.strip())
+            current = character.lstrip()
+        else:
+            current = candidate
+    if current:
+        lines.append(current.strip())
+    return lines
+
+
+def _draw_mode_selection(
+    screen: pygame.Surface,
+    theme_name: str,
+    language: Language,
+) -> None:
+    theme = THEMES[theme_name]
+    draw_overlay(screen, (0, 0, 0), 185)
+    controls = mode_controls(screen.get_size())
+    draw_panel(screen, controls.modal, theme.panel, border_color=theme.grid, border_radius=14)
+    heading = get_font(29, language, bold=True).render(
+        text(language, "choose_mode"), True, theme.text
+    )
+    screen.blit(heading, heading.get_rect(midtop=(controls.modal.centerx, controls.modal.top + 25)))
+
+    descriptions = {
+        "marathon": "marathon_desc",
+        "sprint": "sprint_desc",
+        "timed": "timed_desc",
+    }
+    for index, (mode, rect) in enumerate(controls.cards.items(), start=1):
+        draw_panel(screen, rect, theme.board, border_color=theme.accent, border_radius=11)
+        badge = get_font(15, language, bold=True).render(str(index), True, theme.panel)
+        badge_rect = pygame.Rect(rect.left + 10, rect.top + 10, 26, 26)
+        pygame.draw.rect(screen, theme.accent, badge_rect, border_radius=7)
+        screen.blit(badge, badge.get_rect(center=badge_rect.center))
+        title = get_font(20, language, bold=True).render(text(language, mode), True, theme.text)
+        screen.blit(title, title.get_rect(center=(rect.centerx, rect.top + 53)))
+        description_font = get_font(13, language)
+        lines = _wrapped_lines(
+            text(language, descriptions[mode]), description_font, rect.width - 24
+        )
+        for line_index, line in enumerate(lines[:4]):
+            surface = description_font.render(line, True, theme.muted_text)
+            screen.blit(
+                surface,
+                surface.get_rect(center=(rect.centerx, rect.top + 91 + line_index * 19)),
+            )
+
+    hint = get_font(14, language).render(
+        text(language, "choose_mode_hint"), True, theme.muted_text
+    )
+    screen.blit(hint, hint.get_rect(midbottom=(controls.modal.centerx, controls.modal.bottom - 22)))
+
+
 def draw_game(
     screen: pygame.Surface,
     state: GameState,
@@ -310,6 +434,7 @@ def draw_game(
     settings_open: bool = False,
     animation: LineClearAnimation | None = None,
     now: int = 0,
+    mode_selecting: bool = False,
 ) -> Layout:
     theme = THEMES[theme_name]
     layout = page_layout(screen.get_size())
@@ -322,20 +447,33 @@ def draw_game(
     _draw_board(screen, state, layout, theme, animation, now)
     _draw_side_panels(screen, state, best_score, layout, theme, language)
 
+    mode_label = get_font(22, language, bold=True).render(
+        text(language, state.mode), True, theme.accent
+    )
+    screen.blit(mode_label, mode_label.get_rect(center=(screen.get_width() // 2, 37)))
+
     hint = get_font(13, language).render(text(language, "hint"), True, theme.muted_text)
     screen.blit(hint, hint.get_rect(center=(screen.get_width() // 2, screen.get_height() - 19)))
 
-    if state.status in ("paused", "game_over") and not settings_open:
+    if state.status in ("paused", "game_over", "completed") and not settings_open:
         draw_overlay(screen, (0, 0, 0), 175, layout.board)
-        key = "paused" if state.status == "paused" else "game_over"
+        if state.status == "paused":
+            key = "paused"
+        elif state.status == "completed":
+            key = "sprint_complete" if state.mode == "sprint" else "timed_complete"
+        else:
+            key = "game_over"
         label = get_font(35, language, bold=True).render(text(language, key), True, theme.text)
         screen.blit(label, label.get_rect(center=layout.board.center))
-        if state.status == "game_over":
+        if state.status in ("game_over", "completed"):
+            hint_key = "change_mode_hint" if state.status == "completed" else "restart_hint"
             sub = get_font(16, language).render(
-                text(language, "restart_hint"), True, theme.muted_text
+                text(language, hint_key), True, theme.muted_text
             )
             screen.blit(sub, sub.get_rect(center=(layout.board.centerx, layout.board.centery + 43)))
 
     if settings_open:
         _draw_settings(screen, theme_name, language)
+    elif mode_selecting:
+        _draw_mode_selection(screen, theme_name, language)
     return layout
