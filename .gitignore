@@ -16,4 +16,5 @@ games/game_snake/.player_data.json
 games/game_minesweeper/.player_data.json
 games/game_tetris/.player_data.json
 games/game_aircraft/.player_data.json
+games/game_sudoku/.player_data.json
 games/common/.app_settings.json

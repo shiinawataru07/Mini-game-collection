@@ -15,6 +15,7 @@ from games.game_aircraft.preview import draw_preview as draw_aircraft_preview
 from games.game_gomoku.preview import draw_preview as draw_gomoku_preview
 from games.game_minesweeper.preview import draw_preview as draw_minesweeper_preview
 from games.game_snake.preview import draw_preview as draw_snake_preview
+from games.game_sudoku.preview import draw_preview as draw_sudoku_preview
 from games.game_tetris.preview import draw_preview as draw_tetris_preview
 
 GameRunner = Callable[[], Navigation]
@@ -95,6 +96,15 @@ GAMES: tuple[GameDescriptor, ...] = (
         accent=(55, 191, 194),
         runner="games.game_aircraft.game:run",
         preview=draw_aircraft_preview,
+    ),
+    GameDescriptor(
+        id="sudoku",
+        title="数独",
+        subtitle="填数推理 · 闯关",
+        shortcut=7,
+        accent=(47, 139, 126),
+        runner="games.game_sudoku.game:run",
+        preview=draw_sudoku_preview,
     ),
 )
 
